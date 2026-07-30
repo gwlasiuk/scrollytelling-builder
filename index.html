@@ -2,10 +2,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scrollytelling Parallax Editor Pro</title>
+  <title>Scrollytelling Parallax Editor Ultimate</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Fira+Code&family=Inter:wght@400;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Fira+Code:wght@400;600&family=Inter:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,300;0,700;1,300&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -16,7 +16,7 @@
     
     /* Control Panel (Sidebar) */
     #editor-sidebar {
-      width: 420px;
+      width: 440px;
       background: #1e293b;
       border-right: 1px solid #334155;
       display: flex;
@@ -125,7 +125,25 @@
       height: 100%;
       object-fit: cover;
       will-change: transform;
-      transition: transform 0.05s linear;
+    }
+
+    /* Foreground Overlay Stage */
+    .sticky-overlay-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 3;
+      overflow: hidden;
+    }
+    .sticky-overlay-wrapper img,
+    .sticky-overlay-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      will-change: transform;
     }
 
     /* Text Block Container Overlay */
@@ -151,14 +169,29 @@
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
       transition: background 0.2s ease, color 0.2s ease;
     }
-    .text-card h2 { font-size: 1.8rem; margin-bottom: 12px; line-height: 1.2; }
-    .text-card p { font-size: 1.05rem; line-height: 1.6; }
+    .text-card h2 { margin-bottom: 12px; line-height: 1.2; }
+    .text-card p { line-height: 1.6; }
+
+    /* Size Classes */
+    .h-sm { font-size: 1.3rem; }
+    .h-md { font-size: 1.8rem; }
+    .h-lg { font-size: 2.4rem; }
+    .h-xl { font-size: 3.2rem; }
+
+    .p-sm { font-size: 0.9rem; }
+    .p-md { font-size: 1.1rem; }
+    .p-lg { font-size: 1.35rem; }
 
     /* Font Classes */
-    .font-sans { font-family: 'Inter', sans-serif; }
-    .font-serif { font-family: 'Playfair Display', serif; }
+    .font-inter { font-family: 'Inter', sans-serif; }
+    .font-roboto { font-family: 'Roboto', sans-serif; }
+    .font-montserrat { font-family: 'Montserrat', sans-serif; }
+    .font-playfair { font-family: 'Playfair Display', serif; }
+    .font-merriweather { font-family: 'Merriweather', serif; }
+    .font-lora { font-family: 'Lora', serif; }
+    .font-cinzel { font-family: 'Cinzel', serif; }
+    .font-oswald { font-family: 'Oswald', sans-serif; }
     .font-mono { font-family: 'Fira Code', monospace; }
-    .font-display { font-family: 'Cinzel', serif; }
 
     /* Export Modal */
     #export-modal {
@@ -198,7 +231,7 @@
     <!-- LEFT SIDEBAR: Visual Controls -->
     <div id="editor-sidebar">
       <div class="sidebar-header">
-        <h2>Parallax Story Editor Pro</h2>
+        <h2>Parallax Story Editor Ultimate</h2>
       </div>
 
       <div class="scenes-list" id="scenes-container">
@@ -212,7 +245,7 @@
     </div>
 
     <!-- RIGHT STAGE: Live Interactive Parallax Viewport -->
-    <div id="preview-viewport" onscroll="handleScroll()">
+    <div id="preview-viewport">
       <div class="scrolly-container" id="scrolly-stage">
         <!-- Live Scrollytelling content rendered here -->
       </div>
@@ -242,11 +275,15 @@
         title: "Deep Ocean Discovery",
         text: "As you descend into the bathypelagic zone, sunlight disappears completely.",
         image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
+        overlayImage: "", // Optional foreground overlay
+        overlaySpeed: 0.35,
         scrollDistance: 2.0,
         parallaxSpeed: 0.15,
-        scale: 1.25, // Default overscan zoom
+        scale: 1.25,
         position: "left",
-        fontFamily: "font-sans",
+        fontFamily: "font-inter",
+        titleSize: "h-md",
+        textSize: "p-md",
         bgColor: "#0f172a",
         bgOpacity: 0.85,
         textColor: "#ffffff",
@@ -259,11 +296,15 @@
         title: "Bioluminescent Life",
         text: "Organisms create their own light through complex chemical reactions.",
         image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
+        overlayImage: "",
+        overlaySpeed: 0.40,
         scrollDistance: 1.5,
         parallaxSpeed: 0.20,
         scale: 1.20,
         position: "right",
-        fontFamily: "font-serif",
+        fontFamily: "font-playfair",
+        titleSize: "h-lg",
+        textSize: "p-md",
         bgColor: "#1e1b4b",
         bgOpacity: 0.90,
         textColor: "#f8fafc",
@@ -272,6 +313,10 @@
         padding: 24
       }
     ];
+
+    // Smooth Scroll State Tracking (Interpolation / Lerp)
+    let currentScrollY = 0;
+    let targetScrollY = 0;
 
     // Helper: Detect if file path/URL is a video
     function isVideoUrl(url) {
@@ -310,30 +355,67 @@
             <textarea rows="2" oninput="updateScene(${scene.id}, 'text', this.value)">${escapeHtml(scene.text)}</textarea>
           </div>
 
-          <!-- LOCAL FILE UPLOAD + URL/PATH INPUT -->
+          <!-- BACKGROUND MEDIA -->
           <div class="form-group">
-            <label>Media Source (Image or WebM/MP4 Video)</label>
-            <input type="file" accept="image/*,video/webm,video/mp4" style="margin-bottom: 6px;" onchange="handleFileUpload(${scene.id}, this)">
-            <input type="text" value="${escapeHtml(scene.image)}" placeholder="Paste Image/WebM URL or relative path" onchange="updateScene(${scene.id}, 'image', this.value)">
+            <label>Background Media (Image or WebM/MP4)</label>
+            <input type="file" accept="image/*,video/webm,video/mp4" style="margin-bottom: 4px;" onchange="handleFileUpload(${scene.id}, 'image', this)">
+            <input type="text" value="${escapeHtml(scene.image)}" placeholder="Image/Video URL or path" onchange="updateScene(${scene.id}, 'image', this.value)">
           </div>
 
-          <!-- LAYOUT & POSITIONING -->
+          <!-- FOREGROUND OVERLAY MEDIA -->
+          <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; border: 1px dashed #475569;">
+            <label style="color: #38bdf8;">Foreground Overlay Media (Sits over text)</label>
+            <input type="file" accept="image/*,video/webm,video/mp4" style="margin-bottom: 4px;" onchange="handleFileUpload(${scene.id}, 'overlayImage', this)">
+            <input type="text" value="${escapeHtml(scene.overlayImage || '')}" placeholder="Optional transparent PNG/WebM URL" onchange="updateScene(${scene.id}, 'overlayImage', this.value)">
+            
+            <label style="margin-top: 6px;">
+              Overlay Scroll Speed
+              <span class="range-val" id="ovspeed-val-${scene.id}">${scene.overlaySpeed || 0.3}</span>
+            </label>
+            <input type="range" min="0.0" max="0.8" step="0.05" value="${scene.overlaySpeed || 0.3}" 
+              oninput="updateScene(${scene.id}, 'overlaySpeed', parseFloat(this.value)); document.getElementById('ovspeed-val-${scene.id}').innerText = this.value">
+          </div>
+
+          <!-- FONT SELECTION & SIZING -->
+          <div class="form-group">
+            <label>Font Family</label>
+            <select onchange="updateScene(${scene.id}, 'fontFamily', this.value)">
+              <option value="font-inter" ${scene.fontFamily === 'font-inter' ? 'selected' : ''}>Inter (Modern Sans)</option>
+              <option value="font-roboto" ${scene.fontFamily === 'font-roboto' ? 'selected' : ''}>Roboto (Clean Sans)</option>
+              <option value="font-montserrat" ${scene.fontFamily === 'font-montserrat' ? 'selected' : ''}>Montserrat (Geometric)</option>
+              <option value="font-playfair" ${scene.fontFamily === 'font-playfair' ? 'selected' : ''}>Playfair Display (Editorial)</option>
+              <option value="font-merriweather" ${scene.fontFamily === 'font-merriweather' ? 'selected' : ''}>Merriweather (Classic Serif)</option>
+              <option value="font-lora" ${scene.fontFamily === 'font-lora' ? 'selected' : ''}>Lora (Elegant Serif)</option>
+              <option value="font-cinzel" ${scene.fontFamily === 'font-cinzel' ? 'selected' : ''}>Cinzel (Cinematic Display)</option>
+              <option value="font-oswald" ${scene.fontFamily === 'font-oswald' ? 'selected' : ''}>Oswald (Bold Headline)</option>
+              <option value="font-mono" ${scene.fontFamily === 'font-mono' ? 'selected' : ''}>Fira Code (Tech Mono)</option>
+            </select>
+          </div>
+
           <div class="form-row">
+            <div class="form-group">
+              <label>Heading Size</label>
+              <select onchange="updateScene(${scene.id}, 'titleSize', this.value)">
+                <option value="h-sm" ${scene.titleSize === 'h-sm' ? 'selected' : ''}>Small</option>
+                <option value="h-md" ${scene.titleSize === 'h-md' ? 'selected' : ''}>Medium</option>
+                <option value="h-lg" ${scene.titleSize === 'h-lg' ? 'selected' : ''}>Large</option>
+                <option value="h-xl" ${scene.titleSize === 'h-xl' ? 'selected' : ''}>Cinematic</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Body Text Size</label>
+              <select onchange="updateScene(${scene.id}, 'textSize', this.value)">
+                <option value="p-sm" ${scene.textSize === 'p-sm' ? 'selected' : ''}>Small</option>
+                <option value="p-md" ${scene.textSize === 'p-md' ? 'selected' : ''}>Medium</option>
+                <option value="p-lg" ${scene.textSize === 'p-lg' ? 'selected' : ''}>Large</option>
+              </select>
+            </div>
             <div class="form-group">
               <label>Page Location</label>
               <select onchange="updateScene(${scene.id}, 'position', this.value)">
                 <option value="left" ${scene.position === 'left' ? 'selected' : ''}>Left</option>
                 <option value="center" ${scene.position === 'center' ? 'selected' : ''}>Center</option>
                 <option value="right" ${scene.position === 'right' ? 'selected' : ''}>Right</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Font Family</label>
-              <select onchange="updateScene(${scene.id}, 'fontFamily', this.value)">
-                <option value="font-sans" ${scene.fontFamily === 'font-sans' ? 'selected' : ''}>Sans-Serif (Modern)</option>
-                <option value="font-serif" ${scene.fontFamily === 'font-serif' ? 'selected' : ''}>Serif (Editorial)</option>
-                <option value="font-mono" ${scene.fontFamily === 'font-mono' ? 'selected' : ''}>Monospace (Tech)</option>
-                <option value="font-display" ${scene.fontFamily === 'font-display' ? 'selected' : ''}>Display (Cinematic)</option>
               </select>
             </div>
           </div>
@@ -357,7 +439,7 @@
           <!-- SLIDERS -->
           <div class="form-group">
             <label>
-              Image Scale (Overscan Padding)
+              Image Zoom (Overscan Padding)
               <span class="range-val" id="scale-val-${scene.id}">${scene.scale}x</span>
             </label>
             <input type="range" min="1.05" max="1.50" step="0.05" value="${scene.scale}" 
@@ -384,7 +466,7 @@
 
           <div class="form-group">
             <label>
-              Parallax Depth Intensity
+              Background Parallax Depth
               <span class="range-val" id="speed-val-${scene.id}">${scene.parallaxSpeed}</span>
             </label>
             <input type="range" min="0.0" max="0.4" step="0.02" value="${scene.parallaxSpeed}" 
@@ -398,13 +480,13 @@
     }
 
     // Convert local file to Base64
-    function handleFileUpload(sceneId, inputElement) {
+    function handleFileUpload(sceneId, property, inputElement) {
       const file = inputElement.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = function (e) {
-        updateScene(sceneId, 'image', e.target.result);
+        updateScene(sceneId, property, e.target.result);
         renderEditor();
       };
       reader.readAsDataURL(file);
@@ -423,17 +505,32 @@
 
         const rgbaBg = hexToRgba(scene.bgColor, scene.bgOpacity);
 
-        // Render image or video with default initial scale transform
+        // Render Background Media
         const mediaHtml = isVideoUrl(scene.image)
-          ? `<video id="img-${scene.id}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; transform: scale(${scene.scale});">
+          ? `<video id="img-${scene.id}" autoplay loop muted playsinline style="transform: scale(${scene.scale});">
                <source src="${scene.image}">
              </video>`
           : `<img id="img-${scene.id}" src="${scene.image}" alt="${escapeHtml(scene.title)}" style="transform: scale(${scene.scale});">`;
+
+        // Render Optional Overlay Media
+        let overlayHtml = '';
+        if (scene.overlayImage) {
+          overlayHtml = isVideoUrl(scene.overlayImage)
+            ? `<div class="sticky-overlay-wrapper">
+                 <video id="overlay-${scene.id}" autoplay loop muted playsinline>
+                   <source src="${scene.overlayImage}">
+                 </video>
+               </div>`
+            : `<div class="sticky-overlay-wrapper">
+                 <img id="overlay-${scene.id}" src="${scene.overlayImage}" alt="Foreground Overlay">
+               </div>`;
+        }
 
         section.innerHTML = `
           <div class="sticky-media-wrapper">
             ${mediaHtml}
           </div>
+          ${overlayHtml}
           <div class="text-content-wrapper pos-${scene.position}" style="margin-top: -80vh;">
             <div class="text-card ${scene.fontFamily}" style="
               background: ${rgbaBg};
@@ -442,40 +539,55 @@
               padding: ${scene.padding}px;
               border: 1px solid rgba(255, 255, 255, 0.15);
             ">
-              <h2 style="color: ${scene.accentColor}">${escapeHtml(scene.title)}</h2>
-              <p style="color: ${scene.textColor}">${escapeHtml(scene.text)}</p>
+              <h2 class="${scene.titleSize || 'h-md'}" style="color: ${scene.accentColor}">${escapeHtml(scene.title)}</h2>
+              <p class="${scene.textSize || 'p-md'}" style="color: ${scene.textColor}">${escapeHtml(scene.text)}</p>
             </div>
           </div>
         `;
         stage.appendChild(section);
       });
-
-      handleScroll(); // Initial position calculation
     }
 
-    // Normalized Parallax Engine (Prevents Black Gaps & Uncouples Text Movement)
-    function handleScroll() {
+    // Smooth Inertia Animation Loop (Linear Interpolation)
+    function smoothRenderLoop() {
+      const viewport = document.getElementById('preview-viewport');
+      if (viewport) {
+        targetScrollY = viewport.scrollTop;
+        // Ease towards target scroll position (0.1 = smooth inertia)
+        currentScrollY += (targetScrollY - currentScrollY) * 0.1;
+      }
+
       const vh = window.innerHeight;
 
       scenes.forEach(scene => {
         const section = document.getElementById(`section-${scene.id}`);
         const media = document.getElementById(`img-${scene.id}`);
-        if (!section || !media) return;
+        const overlay = document.getElementById(`overlay-${scene.id}`);
+
+        if (!section) return;
 
         const rect = section.getBoundingClientRect();
         
-        // Check if section is visible inside viewport
         if (rect.top <= vh && rect.bottom >= 0) {
           const totalDistance = rect.height + vh;
-          const currentProgress = (vh - rect.top) / totalDistance; // 0.0 to 1.0
-          
-          // Center transformation around 0.5 mid-point
-          const offsetProgress = currentProgress - 0.5; 
-          const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
+          const currentProgress = (vh - rect.top) / totalDistance;
+          const offsetProgress = currentProgress - 0.5;
 
-          media.style.transform = `scale(${scene.scale}) translateY(${translateY}px)`;
+          // Transform Background
+          if (media) {
+            const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
+            media.style.transform = `scale(${scene.scale}) translateY(${translateY}px)`;
+          }
+
+          // Transform Foreground Overlay (Separate Speed)
+          if (overlay) {
+            const overlayTranslateY = offsetProgress * (vh * (scene.overlaySpeed || 0.3) * 2);
+            overlay.style.transform = `translateY(${overlayTranslateY}px)`;
+          }
         }
       });
+
+      requestAnimationFrame(smoothRenderLoop);
     }
 
     // Data Operations
@@ -486,11 +598,15 @@
         title: "New Story Beat",
         text: "Add your customized text content here...",
         image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
+        overlayImage: "",
+        overlaySpeed: 0.35,
         scrollDistance: 2.0,
         parallaxSpeed: 0.15,
         scale: 1.20,
         position: "center",
-        fontFamily: "font-sans",
+        fontFamily: "font-inter",
+        titleSize: "h-md",
+        textSize: "p-md",
         bgColor: "#0f172a",
         bgOpacity: 0.85,
         textColor: "#ffffff",
@@ -546,25 +662,29 @@
   <title>Scrollytelling Article</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Fira+Code&family=Inter:wght@400;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Fira+Code:wght@400;600&family=Inter:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,300;0,700;1,300&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; }
     .scrolly-section { position: relative; width: 100%; }
     .sticky-media-wrapper { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; }
     .sticky-media-wrapper img,
-    .sticky-media-wrapper video { width: 100%; height: 100%; object-fit: cover; will-change: transform; transition: transform 0.05s linear; }
+    .sticky-media-wrapper video { width: 100%; height: 100%; object-fit: cover; will-change: transform; }
+    .sticky-overlay-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; pointer-events: none; z-index: 3; overflow: hidden; }
+    .sticky-overlay-wrapper img,
+    .sticky-overlay-wrapper video { width: 100%; height: 100%; object-fit: contain; will-change: transform; }
     .text-content-wrapper { position: relative; z-index: 2; max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; }
     .pos-left { justify-content: flex-start; }
     .pos-center { justify-content: center; }
     .pos-right { justify-content: flex-end; }
     .text-card { max-width: 500px; width: 100%; margin-bottom: 80vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-    .text-card h2 { font-size: 1.8rem; margin-bottom: 12px; line-height: 1.2; }
-    .text-card p { font-size: 1.05rem; line-height: 1.6; }
-    .font-sans { font-family: 'Inter', sans-serif; }
-    .font-serif { font-family: 'Playfair Display', serif; }
-    .font-mono { font-family: 'Fira Code', monospace; }
-    .font-display { font-family: 'Cinzel', serif; }
+    .text-card h2 { margin-bottom: 12px; line-height: 1.2; }
+    .text-card p { line-height: 1.6; }
+    .h-sm { font-size: 1.3rem; } .h-md { font-size: 1.8rem; } .h-lg { font-size: 2.4rem; } .h-xl { font-size: 3.2rem; }
+    .p-sm { font-size: 0.9rem; } .p-md { font-size: 1.1rem; } .p-lg { font-size: 1.35rem; }
+    .font-inter { font-family: 'Inter', sans-serif; } .font-roboto { font-family: 'Roboto', sans-serif; } .font-montserrat { font-family: 'Montserrat', sans-serif; }
+    .font-playfair { font-family: 'Playfair Display', serif; } .font-merriweather { font-family: 'Merriweather', serif; } .font-lora { font-family: 'Lora', serif; }
+    .font-cinzel { font-family: 'Cinzel', serif; } .font-oswald { font-family: 'Oswald', sans-serif; } .font-mono { font-family: 'Fira Code', monospace; }
   </style>
 </head>
 <body>
@@ -572,22 +692,31 @@
 
   <script>
     const scenes = ${JSON.stringify(scenes)};
-    window.addEventListener('scroll', () => {
+    function smoothRenderLoop() {
       const vh = window.innerHeight;
       scenes.forEach(scene => {
         const section = document.getElementById('section-' + scene.id);
         const media = document.getElementById('img-' + scene.id);
-        if (!section || !media) return;
+        const overlay = document.getElementById('overlay-' + scene.id);
+        if (!section) return;
         const rect = section.getBoundingClientRect();
         if (rect.top <= vh && rect.bottom >= 0) {
           const totalDistance = rect.height + vh;
           const currentProgress = (vh - rect.top) / totalDistance;
           const offsetProgress = currentProgress - 0.5;
-          const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
-          media.style.transform = 'scale(' + scene.scale + ') translateY(' + translateY + 'px)';
+          if (media) {
+            const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
+            media.style.transform = 'scale(' + scene.scale + ') translateY(' + translateY + 'px)';
+          }
+          if (overlay) {
+            const overlayTranslateY = offsetProgress * (vh * (scene.overlaySpeed || 0.3) * 2);
+            overlay.style.transform = 'translateY(' + overlayTranslateY + 'px)';
+          }
         }
       });
-    });
+      requestAnimationFrame(smoothRenderLoop);
+    }
+    smoothRenderLoop();
   <\/script>
 </body>
 </html>`;
@@ -595,6 +724,7 @@
 
     // Initialize on load
     renderEditor();
+    smoothRenderLoop();
   </script>
 </body>
 </html>
