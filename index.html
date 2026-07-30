@@ -119,11 +119,13 @@
       overflow: hidden;
       z-index: 1;
     }
-    .sticky-media-wrapper img {
+    .sticky-media-wrapper img,
+    .sticky-media-wrapper video {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.1s ease-out;
+      will-change: transform;
+      transition: transform 0.05s linear;
     }
 
     /* Text Block Container Overlay */
@@ -145,9 +147,9 @@
     .text-card {
       max-width: 500px;
       width: 100%;
-      margin-bottom: 80vh; /* Keeps cards spaced out down the scroll track */
+      margin-bottom: 80vh;
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, color 0.2s ease;
     }
     .text-card h2 { font-size: 1.8rem; margin-bottom: 12px; line-height: 1.2; }
     .text-card p { font-size: 1.05rem; line-height: 1.6; }
@@ -242,6 +244,7 @@
         image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
         scrollDistance: 2.0,
         parallaxSpeed: 0.15,
+        scale: 1.25, // Default overscan zoom
         position: "left",
         fontFamily: "font-sans",
         bgColor: "#0f172a",
@@ -257,7 +260,8 @@
         text: "Organisms create their own light through complex chemical reactions.",
         image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
         scrollDistance: 1.5,
-        parallaxSpeed: 0.2,
+        parallaxSpeed: 0.20,
+        scale: 1.20,
         position: "right",
         fontFamily: "font-serif",
         bgColor: "#1e1b4b",
@@ -268,6 +272,13 @@
         padding: 24
       }
     ];
+
+    // Helper: Detect if file path/URL is a video
+    function isVideoUrl(url) {
+      if (!url) return false;
+      const clean = url.toLowerCase().split('?')[0];
+      return clean.endsWith('.webm') || clean.endsWith('.mp4') || clean.startsWith('data:video/');
+    }
 
     // Convert hex color + opacity value to RGBA string
     function hexToRgba(hex, opacity) {
@@ -299,9 +310,11 @@
             <textarea rows="2" oninput="updateScene(${scene.id}, 'text', this.value)">${escapeHtml(scene.text)}</textarea>
           </div>
 
+          <!-- LOCAL FILE UPLOAD + URL/PATH INPUT -->
           <div class="form-group">
-            <label>Image URL</label>
-            <input type="text" value="${escapeHtml(scene.image)}" onchange="updateScene(${scene.id}, 'image', this.value)">
+            <label>Media Source (Image or WebM/MP4 Video)</label>
+            <input type="file" accept="image/*,video/webm,video/mp4" style="margin-bottom: 6px;" onchange="handleFileUpload(${scene.id}, this)">
+            <input type="text" value="${escapeHtml(scene.image)}" placeholder="Paste Image/WebM URL or relative path" onchange="updateScene(${scene.id}, 'image', this.value)">
           </div>
 
           <!-- LAYOUT & POSITIONING -->
@@ -344,6 +357,15 @@
           <!-- SLIDERS -->
           <div class="form-group">
             <label>
+              Image Scale (Overscan Padding)
+              <span class="range-val" id="scale-val-${scene.id}">${scene.scale}x</span>
+            </label>
+            <input type="range" min="1.05" max="1.50" step="0.05" value="${scene.scale}" 
+              oninput="updateScene(${scene.id}, 'scale', parseFloat(this.value)); document.getElementById('scale-val-${scene.id}').innerText = this.value + 'x'">
+          </div>
+
+          <div class="form-group">
+            <label>
               Background Opacity
               <span class="range-val" id="opac-val-${scene.id}">${Math.round(scene.bgOpacity * 100)}%</span>
             </label>
@@ -353,7 +375,7 @@
 
           <div class="form-group">
             <label>
-              Scroll Distance (Sticky)
+              Scroll Distance (Sticky Duration)
               <span class="range-val" id="dist-val-${scene.id}">${scene.scrollDistance}x Viewport</span>
             </label>
             <input type="range" min="1.0" max="4.0" step="0.25" value="${scene.scrollDistance}" 
@@ -362,10 +384,10 @@
 
           <div class="form-group">
             <label>
-              Parallax Speed
+              Parallax Depth Intensity
               <span class="range-val" id="speed-val-${scene.id}">${scene.parallaxSpeed}</span>
             </label>
-            <input type="range" min="0.0" max="0.5" step="0.05" value="${scene.parallaxSpeed}" 
+            <input type="range" min="0.0" max="0.4" step="0.02" value="${scene.parallaxSpeed}" 
               oninput="updateScene(${scene.id}, 'parallaxSpeed', parseFloat(this.value)); document.getElementById('speed-val-${scene.id}').innerText = this.value">
           </div>
         `;
@@ -373,6 +395,19 @@
       });
 
       renderPreview();
+    }
+
+    // Convert local file to Base64
+    function handleFileUpload(sceneId, inputElement) {
+      const file = inputElement.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        updateScene(sceneId, 'image', e.target.result);
+        renderEditor();
+      };
+      reader.readAsDataURL(file);
     }
 
     // Render Scrollytelling Stage
@@ -388,9 +423,16 @@
 
         const rgbaBg = hexToRgba(scene.bgColor, scene.bgOpacity);
 
+        // Render image or video with default initial scale transform
+        const mediaHtml = isVideoUrl(scene.image)
+          ? `<video id="img-${scene.id}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; transform: scale(${scene.scale});">
+               <source src="${scene.image}">
+             </video>`
+          : `<img id="img-${scene.id}" src="${scene.image}" alt="${escapeHtml(scene.title)}" style="transform: scale(${scene.scale});">`;
+
         section.innerHTML = `
           <div class="sticky-media-wrapper">
-            <img id="img-${scene.id}" src="${scene.image}" alt="${escapeHtml(scene.title)}">
+            ${mediaHtml}
           </div>
           <div class="text-content-wrapper pos-${scene.position}" style="margin-top: -80vh;">
             <div class="text-card ${scene.fontFamily}" style="
@@ -407,22 +449,31 @@
         `;
         stage.appendChild(section);
       });
+
+      handleScroll(); // Initial position calculation
     }
 
-    // Handle Live Parallax Math on Scroll
+    // Normalized Parallax Engine (Prevents Black Gaps & Uncouples Text Movement)
     function handleScroll() {
-      const viewport = document.getElementById('preview-viewport');
+      const vh = window.innerHeight;
 
       scenes.forEach(scene => {
         const section = document.getElementById(`section-${scene.id}`);
-        const img = document.getElementById(`img-${scene.id}`);
-        if (!section || !img) return;
+        const media = document.getElementById(`img-${scene.id}`);
+        if (!section || !media) return;
 
         const rect = section.getBoundingClientRect();
-        if (rect.top <= window.innerHeight && rect.bottom >= 0) {
-          const relativeScroll = window.innerHeight - rect.top;
-          const translateY = relativeScroll * scene.parallaxSpeed;
-          img.style.transform = `scale(1.1) translateY(${translateY}px)`;
+        
+        // Check if section is visible inside viewport
+        if (rect.top <= vh && rect.bottom >= 0) {
+          const totalDistance = rect.height + vh;
+          const currentProgress = (vh - rect.top) / totalDistance; // 0.0 to 1.0
+          
+          // Center transformation around 0.5 mid-point
+          const offsetProgress = currentProgress - 0.5; 
+          const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
+
+          media.style.transform = `scale(${scene.scale}) translateY(${translateY}px)`;
         }
       });
     }
@@ -436,7 +487,8 @@
         text: "Add your customized text content here...",
         image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
         scrollDistance: 2.0,
-        parallaxSpeed: 0.2,
+        parallaxSpeed: 0.15,
+        scale: 1.20,
         position: "center",
         fontFamily: "font-sans",
         bgColor: "#0f172a",
@@ -500,7 +552,8 @@
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; }
     .scrolly-section { position: relative; width: 100%; }
     .sticky-media-wrapper { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; }
-    .sticky-media-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.1s ease-out; }
+    .sticky-media-wrapper img,
+    .sticky-media-wrapper video { width: 100%; height: 100%; object-fit: cover; will-change: transform; transition: transform 0.05s linear; }
     .text-content-wrapper { position: relative; z-index: 2; max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; }
     .pos-left { justify-content: flex-start; }
     .pos-center { justify-content: center; }
@@ -520,15 +573,18 @@
   <script>
     const scenes = ${JSON.stringify(scenes)};
     window.addEventListener('scroll', () => {
+      const vh = window.innerHeight;
       scenes.forEach(scene => {
         const section = document.getElementById('section-' + scene.id);
-        const img = document.getElementById('img-' + scene.id);
-        if (!section || !img) return;
+        const media = document.getElementById('img-' + scene.id);
+        if (!section || !media) return;
         const rect = section.getBoundingClientRect();
-        if (rect.top <= window.innerHeight && rect.bottom >= 0) {
-          const relativeScroll = window.innerHeight - rect.top;
-          const translateY = relativeScroll * scene.parallaxSpeed;
-          img.style.transform = 'scale(1.1) translateY(' + translateY + 'px)';
+        if (rect.top <= vh && rect.bottom >= 0) {
+          const totalDistance = rect.height + vh;
+          const currentProgress = (vh - rect.top) / totalDistance;
+          const offsetProgress = currentProgress - 0.5;
+          const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
+          media.style.transform = 'scale(' + scene.scale + ') translateY(' + translateY + 'px)';
         }
       });
     });
