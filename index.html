@@ -1,0 +1,426 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrollytelling Parallax Editor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; overflow: hidden; }
+
+    /* App Layout */
+    #app-container { display: flex; height: 100vh; width: 100vw; }
+    
+    /* Control Panel (Sidebar) */
+    #editor-sidebar {
+      width: 380px;
+      background: #1e293b;
+      border-right: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+    }
+    .sidebar-header {
+      padding: 18px 20px;
+      background: #0f172a;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sidebar-header h2 { font-size: 1.1rem; color: #38bdf8; font-weight: 600; }
+    .scenes-list { flex: 1; overflow-y: auto; padding: 16px; }
+    
+    /* Scene Card in Editor */
+    .scene-card {
+      background: #334155;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #475569;
+      position: relative;
+    }
+    .scene-card h3 { font-size: 0.9rem; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px; }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 8px;
+      color: #fff;
+      font-size: 0.85rem;
+    }
+    .form-group input[type="range"] { padding: 0; }
+    .range-val { font-size: 0.75rem; color: #38bdf8; float: right; }
+    .btn-delete {
+      position: absolute;
+      top: 14px; right: 14px;
+      background: transparent;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .sidebar-actions { padding: 16px; border-top: 1px solid #334155; display: flex; gap: 8px; background: #0f172a; }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #0284c7; color: #fff; }
+    .btn-primary:hover { background: #0369a1; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+
+    /* Live Preview Area */
+    #preview-viewport {
+      flex: 1;
+      overflow-y: auto;
+      height: 100vh;
+      position: relative;
+      background: #000;
+      scroll-behavior: smooth;
+    }
+
+    /* Scrollytelling Engine Output Styles */
+    .scrolly-container { position: relative; width: 100%; }
+    .scrolly-section { position: relative; width: 100%; }
+
+    /* Sticky Media Stage */
+    .sticky-media-wrapper {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 1;
+    }
+    .sticky-media-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.1s ease-out;
+    }
+
+    /* Text Block Container overlaying sticky media */
+    .text-content-wrapper {
+      position: relative;
+      z-index: 2;
+      pointer-events: none;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .text-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 80vh; /* Keeps text spaced out down the scroll track */
+      color: #fff;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+    }
+    .text-card h2 { font-size: 1.8rem; margin-bottom: 12px; color: #38bdf8; }
+    .text-card p { font-size: 1.05rem; line-height: 1.6; color: #e2e8f0; }
+
+    /* Export Modal */
+    #export-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: #1e293b;
+      padding: 24px;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 700px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-content textarea {
+      width: 100%;
+      height: 300px;
+      background: #0f172a;
+      color: #a5f3fc;
+      border: 1px solid #334155;
+      padding: 12px;
+      font-family: monospace;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    <!-- LEFT SIDEBAR: Visual Controls -->
+    <div id="editor-sidebar">
+      <div class="sidebar-header">
+        <h2>Parallax Story Editor</h2>
+      </div>
+
+      <div class="scenes-list" id="scenes-container">
+        <!-- Scene cards dynamically injected here -->
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="btn btn-primary" onclick="addScene()">+ Add Scene</button>
+        <button class="btn btn-success" onclick="openExportModal()">Export Code</button>
+      </div>
+    </div>
+
+    <!-- RIGHT STAGE: Live Interactive Parallax Viewport -->
+    <div id="preview-viewport" onscroll="handleScroll()">
+      <div class="scrolly-container" id="scrolly-stage">
+        <!-- Live Scrollytelling content rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT CODE MODAL -->
+  <div id="export-modal">
+    <div class="modal-content">
+      <h3 style="color:#38bdf8">Your Clean Standalone HTML</h3>
+      <p style="font-size:0.85rem; color:#94a3b8; margin-top:4px;">
+        Copy and save this into your index.html file to publish your standalone scrollytelling article!
+      </p>
+      <textarea id="export-code-output" readonly></textarea>
+      <div style="display:flex; justify-end; gap:8px;">
+        <button class="btn btn-primary" onclick="copyCode()">Copy Code</button>
+        <button class="btn" style="background:#475569; color:#fff;" onclick="closeExportModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initial Default Story Data
+    let scenes = [
+      {
+        id: 1,
+        title: "Deep Ocean Discovery",
+        text: "As you descend into the bathypelagic zone, sunlight disappears completely. The scroll height setting controls how long this image stays pinned while you read.",
+        image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
+        scrollDistance: 2.0, // 2 viewports long
+        parallaxSpeed: 0.15  // image movement factor
+      },
+      {
+        id: 2,
+        title: "Bioluminescent Life",
+        text: "Organisms create their own light through chemical reactions. Notice how smoothly the background image transitions as you scroll past the threshold distance.",
+        image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
+        scrollDistance: 1.5,
+        parallaxSpeed: 0.2
+      }
+    ];
+
+    // Render Editor UI controls
+    function renderEditor() {
+      const container = document.getElementById('scenes-container');
+      container.innerHTML = '';
+
+      scenes.forEach((scene, index) => {
+        const card = document.createElement('div');
+        card.className = 'scene-card';
+        card.innerHTML = `
+          <button class="btn-delete" onclick="removeScene(${scene.id})">✕ Remove</button>
+          <h3>Scene ${index + 1}</h3>
+          
+          <div class="form-group">
+            <label>Heading</label>
+            <input type="text" value="${escapeHtml(scene.title)}" oninput="updateScene(${scene.id}, 'title', this.value)">
+          </div>
+
+          <div class="form-group">
+            <label>Story Text</label>
+            <textarea rows="3" oninput="updateScene(${scene.id}, 'text', this.value)">${escapeHtml(scene.text)}</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Image URL</label>
+            <input type="text" value="${escapeHtml(scene.image)}" onchange="updateScene(${scene.id}, 'image', this.value)">
+          </div>
+
+          <div class="form-group">
+            <label>
+              Scroll Track Distance (Sticky Duration)
+              <span class="range-val" id="dist-val-${scene.id}">${scene.scrollDistance}x Viewport</span>
+            </label>
+            <input type="range" min="1.0" max="4.0" step="0.25" value="${scene.scrollDistance}" 
+              oninput="updateScene(${scene.id}, 'scrollDistance', parseFloat(this.value)); document.getElementById('dist-val-${scene.id}').innerText = this.value + 'x Viewport'">
+          </div>
+
+          <div class="form-group">
+            <label>
+              Parallax Depth Speed
+              <span class="range-val" id="speed-val-${scene.id}">${scene.parallaxSpeed}</span>
+            </label>
+            <input type="range" min="0.0" max="0.5" step="0.05" value="${scene.parallaxSpeed}" 
+              oninput="updateScene(${scene.id}, 'parallaxSpeed', parseFloat(this.value)); document.getElementById('speed-val-${scene.id}').innerText = this.value">
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      renderPreview();
+    }
+
+    // Render Scrollytelling Stage
+    function renderPreview() {
+      const stage = document.getElementById('scrolly-stage');
+      stage.innerHTML = '';
+
+      scenes.forEach((scene, index) => {
+        const section = document.createElement('div');
+        section.className = 'scrolly-section';
+        section.id = `section-${scene.id}`;
+        // Set section height based on scroll distance slider
+        section.style.height = `${scene.scrollDistance * 100}vh`;
+
+        section.innerHTML = `
+          <div class="sticky-media-wrapper">
+            <img id="img-${scene.id}" src="${scene.image}" alt="${escapeHtml(scene.title)}">
+          </div>
+          <div class="text-content-wrapper" style="margin-top: -80vh;">
+            <div class="text-card">
+              <h2>${escapeHtml(scene.title)}</h2>
+              <p>${escapeHtml(scene.text)}</p>
+            </div>
+          </div>
+        `;
+        stage.appendChild(section);
+      });
+    }
+
+    // Handle Live Parallax Math on Scroll
+    function handleScroll() {
+      const viewport = document.getElementById('preview-viewport');
+      const scrollTop = viewport.scrollTop;
+
+      scenes.forEach(scene => {
+        const section = document.getElementById(`section-${scene.id}`);
+        const img = document.getElementById(`img-${scene.id}`);
+        if (!section || !img) return;
+
+        const rect = section.getBoundingClientRect();
+        // Calculate parallax translation when section is within view
+        if (rect.top <= window.innerHeight && rect.bottom >= 0) {
+          const relativeScroll = window.innerHeight - rect.top;
+          const translateY = relativeScroll * scene.parallaxSpeed;
+          img.style.transform = `scale(1.1) translateY(${translateY}px)`;
+        }
+      });
+    }
+
+    // Data Operations
+    function addScene() {
+      const newId = Date.now();
+      scenes.push({
+        id: newId,
+        title: "New Story Beat",
+        text: "Add your explanatory or narrative text here...",
+        image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
+        scrollDistance: 2.0,
+        parallaxSpeed: 0.2
+      });
+      renderEditor();
+    }
+
+    function removeScene(id) {
+      scenes = scenes.filter(s => s.id !== id);
+      renderEditor();
+    }
+
+    function updateScene(id, field, value) {
+      const scene = scenes.find(s => s.id === id);
+      if (scene) {
+        scene[field] = value;
+        renderPreview();
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    // Modal & Export Code Logic
+    function openExportModal() {
+      const modal = document.getElementById('export-modal');
+      const output = document.getElementById('export-code-output');
+      modal.style.display = 'flex';
+      
+      // Clean HTML output (without sidebar) for standalone site
+      output.value = generateCleanHTML();
+    }
+
+    function closeExportModal() {
+      document.getElementById('export-modal').style.display = 'none';
+    }
+
+    function copyCode() {
+      const output = document.getElementById('export-code-output');
+      output.select();
+      document.execCommand('copy');
+      alert('Standalone website code copied to clipboard!');
+    }
+
+    function generateCleanHTML() {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrollytelling Article</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; }
+    .scrolly-section { position: relative; width: 100%; }
+    .sticky-media-wrapper { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; }
+    .sticky-media-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.1s ease-out; }
+    .text-content-wrapper { position: relative; z-index: 2; max-width: 600px; margin: 0 auto; padding: 0 20px; }
+    .text-card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 32px; margin-bottom: 80vh; color: #fff; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+    .text-card h2 { font-size: 1.8rem; margin-bottom: 12px; color: #38bdf8; }
+    .text-card p { font-size: 1.05rem; line-height: 1.6; color: #e2e8f0; }
+  </style>
+</head>
+<body>
+  ${document.getElementById('scrolly-stage').innerHTML}
+
+  <script>
+    const scenes = ${JSON.stringify(scenes)};
+    window.addEventListener('scroll', () => {
+      scenes.forEach(scene => {
+        const section = document.getElementById('section-' + scene.id);
+        const img = document.getElementById('img-' + scene.id);
+        if (!section || !img) return;
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= window.innerHeight && rect.bottom >= 0) {
+          const relativeScroll = window.innerHeight - rect.top;
+          const translateY = relativeScroll * scene.parallaxSpeed;
+          img.style.transform = 'scale(1.1) translateY(' + translateY + 'px)';
+        }
+      });
+    });
+  <\/script>
+</body>
+</html>`;
+    }
+
+    // Initialize on load
+    renderEditor();
+  </script>
+</body>
+</html>
