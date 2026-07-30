@@ -194,6 +194,7 @@
       width: 100%;
       margin-bottom: 80vh;
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+      will-change: transform, opacity;
       transition: background 0.2s ease, color 0.2s ease;
     }
     .text-card h2 { margin-bottom: 12px; line-height: 1.2; }
@@ -325,6 +326,7 @@
         fontFamily: "font-inter",
         titleSize: "h-md",
         textSize: "p-md",
+        textAnimation: "fade-up",
         bgColor: "#0f172a",
         bgOpacity: 0.85,
         textColor: "#ffffff",
@@ -346,6 +348,7 @@
         fontFamily: "font-playfair",
         titleSize: "h-lg",
         textSize: "p-md",
+        textAnimation: "zoom",
         bgColor: "#1e1b4b",
         bgOpacity: 0.90,
         textColor: "#f8fafc",
@@ -359,6 +362,20 @@
     let projects = {};
     let activeProjectId = "project_default";
     let scenes = [];
+
+    // Helper: Sanitize scene object with fallback defaults for missing fields
+    function sanitizeScene(scene) {
+      return {
+        ...scene,
+        textAnimation: scene.textAnimation || 'fade-up',
+        titleSize: scene.titleSize || 'h-md',
+        textSize: scene.textSize || 'p-md',
+        fontFamily: scene.fontFamily || 'font-inter',
+        overlayImage: scene.overlayImage || '',
+        overlaySpeed: typeof scene.overlaySpeed !== 'undefined' ? scene.overlaySpeed : 0.35,
+        scale: scene.scale || 1.20
+      };
+    }
 
     // Helper: Save current state to browser memory
     function persistToLocalStorage() {
@@ -377,14 +394,13 @@
       if (storedDb) {
         projects = JSON.parse(storedDb);
       } else {
-        // First-time setup
         projects = {
           "project_default": { name: "Ocean Discovery (Demo)", scenes: defaultSeedScenes }
         };
       }
 
       activeProjectId = storedActive && projects[storedActive] ? storedActive : Object.keys(projects)[0];
-      scenes = projects[activeProjectId].scenes;
+      scenes = projects[activeProjectId].scenes.map(sanitizeScene);
       
       updateProjectSelectorUI();
     }
@@ -408,7 +424,7 @@
       if (!projects[id]) return;
       persistToLocalStorage();
       activeProjectId = id;
-      scenes = projects[activeProjectId].scenes;
+      scenes = projects[activeProjectId].scenes.map(sanitizeScene);
       persistToLocalStorage();
       renderEditor();
     }
@@ -421,13 +437,11 @@
       const newId = "project_" + Date.now();
       projects[newId] = {
         name: name,
-        scenes: [{
+        scenes: [sanitizeScene({
           id: Date.now(),
           title: "Chapter 1",
           text: "Write your opening section text here...",
           image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
-          overlayImage: "",
-          overlaySpeed: 0.35,
           scrollDistance: 2.0,
           parallaxSpeed: 0.15,
           scale: 1.20,
@@ -435,13 +449,14 @@
           fontFamily: "font-inter",
           titleSize: "h-md",
           textSize: "p-md",
+          textAnimation: "fade-up",
           bgColor: "#0f172a",
           bgOpacity: 0.85,
           textColor: "#ffffff",
           accentColor: "#38bdf8",
           borderRadius: 12,
           padding: 32
-        }]
+        })]
       };
 
       activeProjectId = newId;
@@ -460,7 +475,7 @@
       if (confirm(`Are you sure you want to delete "${projects[activeProjectId].name}"?`)) {
         delete projects[activeProjectId];
         activeProjectId = Object.keys(projects)[0];
-        scenes = projects[activeProjectId].scenes;
+        scenes = projects[activeProjectId].scenes.map(sanitizeScene);
         persistToLocalStorage();
         updateProjectSelectorUI();
         renderEditor();
@@ -489,6 +504,7 @@
           const importedData = JSON.parse(e.target.result);
           if (importedData.name && Array.isArray(importedData.scenes)) {
             const newId = "project_" + Date.now();
+            importedData.scenes = importedData.scenes.map(sanitizeScene);
             projects[newId] = importedData;
             activeProjectId = newId;
             scenes = projects[activeProjectId].scenes;
@@ -562,6 +578,17 @@
             </label>
             <input type="range" min="0.0" max="0.8" step="0.05" value="${scene.overlaySpeed || 0.3}" 
               oninput="updateScene(${scene.id}, 'overlaySpeed', parseFloat(this.value)); document.getElementById('ovspeed-val-${scene.id}').innerText = this.value">
+          </div>
+
+          <!-- TEXT ENTRANCE ANIMATION -->
+          <div class="form-group">
+            <label>Text Entrance Animation</label>
+            <select onchange="updateScene(${scene.id}, 'textAnimation', this.value)">
+              <option value="none" ${scene.textAnimation === 'none' ? 'selected' : ''}>None (Always Visible)</option>
+              <option value="fade" ${scene.textAnimation === 'fade' ? 'selected' : ''}>Fade In</option>
+              <option value="fade-up" ${scene.textAnimation === 'fade-up' ? 'selected' : ''}>Fade In + Slide Up</option>
+              <option value="zoom" ${scene.textAnimation === 'zoom' ? 'selected' : ''}>Fade In + Zoom In</option>
+            </select>
           </div>
 
           <!-- FONT SELECTION & SIZING -->
@@ -754,16 +781,41 @@
           const currentProgress = (vh - rect.top) / totalDistance;
           const offsetProgress = currentProgress - 0.5;
 
-          // Transform Background
+          // Transform Background Media
           if (media) {
             const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
             media.style.transform = `scale(${scene.scale}) translateY(${translateY}px)`;
           }
 
-          // Transform Foreground Overlay (Separate Speed)
+          // Transform Foreground Overlay Media
           if (overlay) {
             const overlayTranslateY = offsetProgress * (vh * (scene.overlaySpeed || 0.3) * 2);
             overlay.style.transform = `translateY(${overlayTranslateY}px)`;
+          }
+
+          // Transform & Fade Text Card Based on Selected Animation
+          const textCard = document.querySelector(`#section-${scene.id} .text-card`);
+          if (textCard) {
+            const animType = scene.textAnimation || 'fade-up';
+
+            if (animType === 'none') {
+              textCard.style.opacity = '1';
+              textCard.style.transform = 'none';
+            } else {
+              const centerDist = Math.abs(offsetProgress); // 0.0 at center, 0.5 at edges
+              const opacity = Math.max(0, Math.min(1, 1 - (centerDist * 3.2)));
+              textCard.style.opacity = opacity;
+
+              if (animType === 'fade-up') {
+                const translateY = (1 - opacity) * 40;
+                textCard.style.transform = `translateY(${translateY}px)`;
+              } else if (animType === 'zoom') {
+                const scale = 0.9 + (opacity * 0.1);
+                textCard.style.transform = `scale(${scale})`;
+              } else if (animType === 'fade') {
+                textCard.style.transform = 'none';
+              }
+            }
           }
         }
       });
@@ -774,7 +826,7 @@
     // Data Operations
     function addScene() {
       const newId = Date.now();
-      scenes.push({
+      scenes.push(sanitizeScene({
         id: newId,
         title: "New Story Beat",
         text: "Add your customized text content here...",
@@ -788,13 +840,14 @@
         fontFamily: "font-inter",
         titleSize: "h-md",
         textSize: "p-md",
+        textAnimation: "fade-up",
         bgColor: "#0f172a",
         bgOpacity: 0.85,
         textColor: "#ffffff",
         accentColor: "#38bdf8",
         borderRadius: 12,
         padding: 32
-      });
+      }));
       persistToLocalStorage();
       renderEditor();
     }
@@ -861,7 +914,7 @@
     .pos-left { justify-content: flex-start; }
     .pos-center { justify-content: center; }
     .pos-right { justify-content: flex-end; }
-    .text-card { max-width: 500px; width: 100%; margin-bottom: 80vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+    .text-card { max-width: 500px; width: 100%; margin-bottom: 80vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); will-change: transform, opacity; }
     .text-card h2 { margin-bottom: 12px; line-height: 1.2; }
     .text-card p { line-height: 1.6; }
     .h-sm { font-size: 1.3rem; } .h-md { font-size: 1.8rem; } .h-lg { font-size: 2.4rem; } .h-xl { font-size: 3.2rem; }
@@ -895,6 +948,27 @@
           if (overlay) {
             const overlayTranslateY = offsetProgress * (vh * (scene.overlaySpeed || 0.3) * 2);
             overlay.style.transform = 'translateY(' + overlayTranslateY + 'px)';
+          }
+          const textCard = document.querySelector('#section-' + scene.id + ' .text-card');
+          if (textCard) {
+            const animType = scene.textAnimation || 'fade-up';
+            if (animType === 'none') {
+              textCard.style.opacity = '1';
+              textCard.style.transform = 'none';
+            } else {
+              const centerDist = Math.abs(offsetProgress);
+              const opacity = Math.max(0, Math.min(1, 1 - (centerDist * 3.2)));
+              textCard.style.opacity = opacity;
+              if (animType === 'fade-up') {
+                const translateY = (1 - opacity) * 40;
+                textCard.style.transform = 'translateY(' + translateY + 'px)';
+              } else if (animType === 'zoom') {
+                const scale = 0.9 + (opacity * 0.1);
+                textCard.style.transform = 'scale(' + scale + ')';
+              } else if (animType === 'fade') {
+                textCard.style.transform = 'none';
+              }
+            }
           }
         }
       });
