@@ -220,7 +220,7 @@
     .text-card {
       max-width: 500px;
       width: 100%;
-      margin-bottom: 20vh; /* Reduced from 60vh to eliminate dead space in short scenes */
+      margin-bottom: 20vh;
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
       transition: background 0.2s ease, color 0.2s ease;
       pointer-events: auto;
@@ -228,26 +228,69 @@
     .text-card h2 { margin-bottom: 12px; line-height: 1.2; }
     .text-card p { line-height: 1.6; }
 
-    /* Word-by-Word Floating Entrance Effect */
+    /* -------------------------------------------------------------
+       TEXT ENTRANCE ANIMATIONS
+    ------------------------------------------------------------- */
+    
+    /* 1. Word-by-Word Floating */
     .word-span {
       display: inline-block;
       white-space: pre-wrap;
       opacity: 0;
-      transform: translateY(18px);
+      transform: translateY(16px);
       will-change: transform, opacity;
     }
+    .text-card.anim-words.active .word-span {
+      animation: wordFloatIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation-delay: calc(var(--word-index) * 0.018s);
+    }
+    @keyframes wordFloatIn { to { opacity: 1; transform: translateY(0); } }
 
-    .text-card.animate-words .word-span {
-      animation: wordFloatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      animation-delay: calc(var(--word-index) * 0.02s);
+    /* 2. Slide Up Fade */
+    .text-card.anim-slide-up {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.5s ease-out, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .text-card.anim-slide-up.active {
+      opacity: 1;
+      transform: translateY(0);
     }
 
-    @keyframes wordFloatIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    /* 3. Pop / Zoom In */
+    .text-card.anim-zoom-pop {
+      opacity: 0;
+      transform: scale(0.85) translateY(20px);
+      transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
+    .text-card.anim-zoom-pop.active {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    /* 4. Blur to Focus */
+    .text-card.anim-blur-focus {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translateY(15px);
+      transition: opacity 0.5s ease, filter 0.5s ease, transform 0.5s ease;
+    }
+    .text-card.anim-blur-focus.active {
+      opacity: 1;
+      filter: blur(0px);
+      transform: translateY(0);
+    }
+
+    /* 5. Typewriter Effect */
+    .type-char {
+      opacity: 0;
+      display: inline;
+    }
+    .text-card.anim-typewriter.active .type-char {
+      animation: typeCharIn 0.05s forwards;
+      animation-delay: calc(var(--char-index) * 0.025s);
+    }
+    @keyframes typeCharIn { to { opacity: 1; } }
 
     /* Size Classes */
     .h-sm { font-size: 1.3rem; }
@@ -371,7 +414,7 @@
   </div>
 
   <script>
-    // Initial Seed Data (Defaulting to snappy 0.8x viewport heights)
+    // Initial Seed Data
     const defaultSeedScenes = [
       {
         id: 1,
@@ -415,7 +458,7 @@
         fontFamily: "font-playfair",
         titleSize: "h-lg",
         textSize: "p-md",
-        textAnimation: "words",
+        textAnimation: "blur-focus",
         bgColor: "#1e1b4b",
         bgOpacity: 0.90,
         textColor: "#f8fafc",
@@ -435,10 +478,19 @@
     let targetScrollY = 0;
     const lerpFactor = 0.12;
 
+    // Helper: Wrap words for staggered animation
     function wrapWords(text) {
       if (!text) return '';
       return text.split(' ').map((word, i) => 
         `<span class="word-span" style="--word-index: ${i}">${escapeHtml(word)}</span> `
+      ).join('');
+    }
+
+    // Helper: Wrap characters for typewriter effect
+    function wrapCharacters(text) {
+      if (!text) return '';
+      return text.split('').map((char, i) => 
+        `<span class="type-char" style="--char-index: ${i}">${escapeHtml(char)}</span>`
       ).join('');
     }
 
@@ -637,7 +689,7 @@
             <textarea rows="3" oninput="updateScene(${scene.id}, 'text', this.value)">${escapeHtml(scene.text)}</textarea>
           </div>
 
-          <!-- SCENE HEIGHT CONTROL (LOW MIN RANGE) -->
+          <!-- SCENE HEIGHT CONTROL -->
           <div class="form-group" style="background: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);">
             <label style="color: #38bdf8;">
               Scene Height / Scroll Distance
@@ -699,11 +751,16 @@
             </div>
           </div>
 
+          <!-- EXPANDED TEXT ANIMATION ENTRANCE OPTIONS -->
           <div class="form-group">
-            <label>Text Entrance Style</label>
+            <label>Text Entrance Animation Style</label>
             <select onchange="updateScene(${scene.id}, 'textAnimation', this.value)">
               <option value="words" ${scene.textAnimation === 'words' ? 'selected' : ''}>Floating Words (Staggered)</option>
-              <option value="none" ${scene.textAnimation === 'none' ? 'selected' : ''}>Static (Always Visible)</option>
+              <option value="slide-up" ${scene.textAnimation === 'slide-up' ? 'selected' : ''}>Fade In & Slide Up</option>
+              <option value="zoom-pop" ${scene.textAnimation === 'zoom-pop' ? 'selected' : ''}>Pop / Zoom In</option>
+              <option value="blur-focus" ${scene.textAnimation === 'blur-focus' ? 'selected' : ''}>Blur to Clear (Focus)</option>
+              <option value="typewriter" ${scene.textAnimation === 'typewriter' ? 'selected' : ''}>Typewriter Effect</option>
+              <option value="none" ${scene.textAnimation === 'none' ? 'selected' : ''}>Static (Instant)</option>
             </select>
           </div>
 
@@ -841,8 +898,18 @@
                </div>`;
         }
 
-        const titleHtml = scene.textAnimation === 'none' ? escapeHtml(scene.title) : wrapWords(scene.title);
-        const bodyHtml = scene.textAnimation === 'none' ? escapeHtml(scene.text) : wrapWords(scene.text);
+        // Text formatting based on selected animation type
+        let titleHtml = escapeHtml(scene.title);
+        let bodyHtml = escapeHtml(scene.text);
+        let animClass = `anim-${scene.textAnimation || 'words'}`;
+
+        if (scene.textAnimation === 'words') {
+          titleHtml = wrapWords(scene.title);
+          bodyHtml = wrapWords(scene.text);
+        } else if (scene.textAnimation === 'typewriter') {
+          titleHtml = wrapCharacters(scene.title);
+          bodyHtml = wrapCharacters(scene.text);
+        }
 
         section.innerHTML = `
           <div class="sticky-media-wrapper">
@@ -850,7 +917,7 @@
           </div>
           ${overlayHtml}
           <div class="text-content-wrapper pos-${scene.position}" style="margin-top: -85vh;">
-            <div class="text-card ${scene.fontFamily}" style="
+            <div class="text-card ${scene.fontFamily} ${animClass}" style="
               background: ${rgbaBg};
               backdrop-filter: blur(8px);
               border-radius: ${scene.borderRadius}px;
@@ -923,13 +990,13 @@
             overlay.style.transform = `scale3d(${overlayScale}, ${overlayScale}, 1) translate3d(0, ${overlayTranslateY}px, 0)`;
           }
 
-          // 3. Text entrance toggle
+          // 3. Text entrance toggle (EARLIER TRIGGER: activates when section top enters bottom 30% of viewport)
           const textCard = section.querySelector('.text-card');
           if (textCard && scene.textAnimation !== 'none') {
-            if (relativeScroll >= 0 && relativeScroll <= sectionHeight - vh * 0.2) {
-              textCard.classList.add('animate-words');
+            if (relativeScroll >= -vh * 0.3 && relativeScroll <= sectionHeight - vh * 0.2) {
+              textCard.classList.add('active');
             } else {
-              textCard.classList.remove('animate-words');
+              textCard.classList.remove('active');
             }
           }
         }
@@ -1033,9 +1100,24 @@
     .pos-left { justify-content: flex-start; } .pos-center { justify-content: center; } .pos-right { justify-content: flex-end; }
     .text-card { max-width: 500px; width: 100%; margin-bottom: 20vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
     .text-card h2 { margin-bottom: 12px; line-height: 1.2; } .text-card p { line-height: 1.6; }
-    .word-span { display: inline-block; white-space: pre-wrap; opacity: 0; transform: translateY(18px); will-change: transform, opacity; }
-    .text-card.animate-words .word-span { animation: wordFloatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: calc(var(--word-index) * 0.02s); }
+    
+    .word-span { display: inline-block; white-space: pre-wrap; opacity: 0; transform: translateY(16px); will-change: transform, opacity; }
+    .text-card.anim-words.active .word-span { animation: wordFloatIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: calc(var(--word-index) * 0.018s); }
     @keyframes wordFloatIn { to { opacity: 1; transform: translateY(0); } }
+
+    .text-card.anim-slide-up { opacity: 0; transform: translateY(40px); transition: opacity 0.5s ease-out, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    .text-card.anim-slide-up.active { opacity: 1; transform: translateY(0); }
+
+    .text-card.anim-zoom-pop { opacity: 0; transform: scale(0.85) translateY(20px); transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .text-card.anim-zoom-pop.active { opacity: 1; transform: scale(1) translateY(0); }
+
+    .text-card.anim-blur-focus { opacity: 0; filter: blur(12px); transform: translateY(15px); transition: opacity 0.5s ease, filter 0.5s ease, transform 0.5s ease; }
+    .text-card.anim-blur-focus.active { opacity: 1; filter: blur(0px); transform: translateY(0); }
+
+    .type-char { opacity: 0; display: inline; }
+    .text-card.anim-typewriter.active .type-char { animation: typeCharIn 0.05s forwards; animation-delay: calc(var(--char-index) * 0.025s); }
+    @keyframes typeCharIn { to { opacity: 1; } }
+
     .h-sm { font-size: 1.3rem; } .h-md { font-size: 1.8rem; } .h-lg { font-size: 2.4rem; } .h-xl { font-size: 3.2rem; }
     .p-sm { font-size: 0.9rem; } .p-md { font-size: 1.1rem; } .p-lg { font-size: 1.35rem; }
     .font-inter { font-family: 'Inter', sans-serif; } .font-roboto { font-family: 'Roboto', sans-serif; } .font-montserrat { font-family: 'Montserrat', sans-serif; }
@@ -1104,10 +1186,10 @@
 
           const textCard = section.querySelector('.text-card');
           if (textCard && scene.textAnimation !== 'none') {
-            if (relativeScroll >= 0 && relativeScroll <= sectionHeight - vh * 0.2) {
-              textCard.classList.add('animate-words');
+            if (relativeScroll >= -vh * 0.3 && relativeScroll <= sectionHeight - vh * 0.2) {
+              textCard.classList.add('active');
             } else {
-              textCard.classList.remove('animate-words');
+              textCard.classList.remove('active');
             }
           }
         }
