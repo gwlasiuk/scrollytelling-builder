@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scrollytelling Parallax Editor Pro</title>
+  <title>Scrollytelling Parallax Editor Pro (Ultra-Snappy)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Fira+Code:wght@400;600&family=Inter:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,300;0,700;1,300&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -130,7 +130,7 @@
       height: 100vh;
       position: relative;
       background: #000;
-      scroll-behavior: smooth;
+      scroll-behavior: auto; /* Disabled browser smooth scroll to prevent LERP fighting */
     }
 
     /* Scrollytelling Stage Styles */
@@ -145,6 +145,8 @@
       height: 100vh;
       overflow: hidden;
       z-index: 1;
+      backface-visibility: hidden;
+      transform: translateZ(0);
     }
     .sticky-media-wrapper img,
     .sticky-media-wrapper video {
@@ -152,38 +154,43 @@
       height: 100%;
       object-fit: cover;
       will-change: transform;
+      backface-visibility: hidden;
     }
 
-    /* Foreground Overlay Stage */
+    /* Foreground Overlay Stage - NON-CUTOFF FIX */
     .sticky-overlay-wrapper {
-      position: absolute;
+      position: sticky;
       top: 0;
       left: 0;
       width: 100%;
       height: 100vh;
       pointer-events: none;
-      z-index: 3;
-      overflow: hidden;
+      z-index: 4;
+      overflow: visible;
       display: flex;
+      margin-top: -100vh; /* Align with sticky media */
+      backface-visibility: hidden;
     }
     .sticky-overlay-wrapper img,
     .sticky-overlay-wrapper video {
-      max-width: 100%;
-      max-height: 100%;
+      max-width: 90vw;
+      max-height: 85vh;
       object-fit: contain;
       will-change: transform;
+      backface-visibility: hidden;
+      filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
     }
     
     /* Overlay Positions */
     .overlay-center { justify-content: center; align-items: center; }
-    .overlay-right-bottom { justify-content: flex-end; align-items: flex-end; }
-    .overlay-left-bottom { justify-content: flex-start; align-items: flex-end; }
-    .overlay-right-top { justify-content: flex-end; align-items: flex-start; }
+    .overlay-right-bottom { justify-content: flex-end; align-items: flex-end; padding: 40px; }
+    .overlay-left-bottom { justify-content: flex-start; align-items: flex-end; padding: 40px; }
+    .overlay-right-top { justify-content: flex-end; align-items: flex-start; padding: 40px; }
 
     /* Text Block Container Overlay */
     .text-content-wrapper {
       position: relative;
-      z-index: 2;
+      z-index: 3;
       pointer-events: none;
       max-width: 1100px;
       margin: 0 auto;
@@ -199,14 +206,15 @@
     .text-card {
       max-width: 500px;
       width: 100%;
-      margin-bottom: 80vh;
+      margin-bottom: 60vh;
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
       transition: background 0.2s ease, color 0.2s ease;
+      pointer-events: auto;
     }
     .text-card h2 { margin-bottom: 12px; line-height: 1.2; }
     .text-card p { line-height: 1.6; }
 
-    /* Word-by-Word Floating Entrance Effect - FIXED WHITESPACE BUG */
+    /* Word-by-Word Floating Entrance Effect */
     .word-span {
       display: inline-block;
       white-space: pre-wrap;
@@ -216,8 +224,8 @@
     }
 
     .text-card.animate-words .word-span {
-      animation: wordFloatIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      animation-delay: calc(var(--word-index) * 0.025s);
+      animation: wordFloatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation-delay: calc(var(--word-index) * 0.02s);
     }
 
     @keyframes wordFloatIn {
@@ -337,15 +345,16 @@
   </div>
 
   <script>
-    // Initial Default Seed Data
+    // Initial Seed Data
     const defaultSeedScenes = [
       {
         id: 1,
         title: "Deep Ocean Discovery",
         text: "As you descend into the bathypelagic zone, sunlight disappears completely.",
         image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
-        overlayImage: "",
-        overlaySpeed: 0.35,
+        overlayImage: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/382.png", // Submarine Cutout Sample
+        overlayMotionMode: "upward-slide",
+        overlaySpeed: 0.45,
         overlayScale: 1.0,
         overlayPos: "overlay-center",
         scrollDistance: 2.0,
@@ -369,6 +378,7 @@
         text: "Organisms create their own light through complex chemical reactions.",
         image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
         overlayImage: "",
+        overlayMotionMode: "depth-zoom",
         overlaySpeed: 0.40,
         overlayScale: 1.0,
         overlayPos: "overlay-right-bottom",
@@ -389,12 +399,16 @@
       }
     ];
 
-    // Global App State
+    // App State
     let projects = {};
     let activeProjectId = "project_default";
     let scenes = [];
 
-    // Helper: Wrap individual words in animated span tags safely preserving spacing
+    // LERP Smooth Scroll Interpolation Variables
+    let currentScrollY = 0;
+    let targetScrollY = 0;
+    const lerpFactor = 0.12; // Controls snappiness (0.05 = soft/floaty, 0.2 = rigid/fast)
+
     function wrapWords(text) {
       if (!text) return '';
       return text.split(' ').map((word, i) => 
@@ -402,7 +416,6 @@
       ).join('');
     }
 
-    // Helper: Sanitize scene object with fallback defaults
     function sanitizeScene(scene) {
       return {
         ...scene,
@@ -411,14 +424,14 @@
         textSize: scene.textSize || 'p-md',
         fontFamily: scene.fontFamily || 'font-inter',
         overlayImage: scene.overlayImage || '',
-        overlaySpeed: typeof scene.overlaySpeed !== 'undefined' ? scene.overlaySpeed : 0.35,
+        overlayMotionMode: scene.overlayMotionMode || 'upward-slide',
+        overlaySpeed: typeof scene.overlaySpeed !== 'undefined' ? scene.overlaySpeed : 0.45,
         overlayScale: scene.overlayScale || 1.0,
         overlayPos: scene.overlayPos || 'overlay-center',
         scale: scene.scale || 1.20
       };
     }
 
-    // Helper: Save current state to browser memory
     function persistToLocalStorage() {
       if (activeProjectId && projects[activeProjectId]) {
         projects[activeProjectId].scenes = scenes;
@@ -427,7 +440,6 @@
       localStorage.setItem('scrolly_active_id', activeProjectId);
     }
 
-    // Helper: Load projects from browser memory
     function loadFromLocalStorage() {
       const storedDb = localStorage.getItem('scrolly_projects_db');
       const storedActive = localStorage.getItem('scrolly_active_id');
@@ -442,11 +454,9 @@
 
       activeProjectId = storedActive && projects[storedActive] ? storedActive : Object.keys(projects)[0];
       scenes = projects[activeProjectId].scenes.map(sanitizeScene);
-      
       updateProjectSelectorUI();
     }
 
-    // Update Project Dropdown Selector
     function updateProjectSelectorUI() {
       const selector = document.getElementById('project-selector');
       selector.innerHTML = '';
@@ -460,7 +470,6 @@
       });
     }
 
-    // Switch between saved projects
     function switchProject(id) {
       if (!projects[id]) return;
       persistToLocalStorage();
@@ -470,7 +479,6 @@
       renderEditor();
     }
 
-    // Create a new blank project
     function createNewProject() {
       const name = prompt("Enter a name for your new scrollytelling project:", "My New Story");
       if (!name) return;
@@ -507,7 +515,6 @@
       renderEditor();
     }
 
-    // Delete current project
     function deleteCurrentProject() {
       if (Object.keys(projects).length <= 1) {
         alert("You must keep at least one project!");
@@ -523,7 +530,6 @@
       }
     }
 
-    // Export Project Backup File (.json)
     function exportProjectJSON() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects[activeProjectId], null, 2));
       const downloadAnchor = document.createElement('a');
@@ -534,7 +540,6 @@
       downloadAnchor.remove();
     }
 
-    // Import Project File (.json)
     function importProjectJSON(fileInput) {
       const file = fileInput.files[0];
       if (!file) return;
@@ -563,14 +568,12 @@
       reader.readAsText(file);
     }
 
-    // Helper: Detect if file path/URL is a video
     function isVideoUrl(url) {
       if (!url) return false;
       const clean = url.toLowerCase().split('?')[0];
       return clean.endsWith('.webm') || clean.endsWith('.mp4') || clean.startsWith('data:video/');
     }
 
-    // Convert hex color + opacity value to RGBA string
     function hexToRgba(hex, opacity) {
       let c = hex.replace('#', '');
       if (c.length === 3) c = c.split('').map(x => x + x).join('');
@@ -578,7 +581,6 @@
       return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${opacity})`;
     }
 
-    // Render Editor UI controls
     function renderEditor() {
       const container = document.getElementById('scenes-container');
       container.innerHTML = '';
@@ -600,20 +602,28 @@
             <textarea rows="3" oninput="updateScene(${scene.id}, 'text', this.value)">${escapeHtml(scene.text)}</textarea>
           </div>
 
-          <!-- BACKGROUND MEDIA -->
           <div class="form-group">
             <label>Background Media (Image or WebM/MP4)</label>
             <input type="file" accept="image/*,video/webm,video/mp4" style="margin-bottom: 4px;" onchange="handleFileUpload(${scene.id}, 'image', this)">
             <input type="text" value="${escapeHtml(scene.image)}" placeholder="Image/Video URL or path" onchange="updateScene(${scene.id}, 'image', this.value)">
           </div>
 
-          <!-- FOREGROUND OVERLAY MEDIA -->
-          <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; border: 1px dashed #475569;">
-            <label style="color: #38bdf8;">Foreground Overlay Cutout (Sits over text)</label>
+          <!-- FOREGROUND OVERLAY MEDIA CONFIG -->
+          <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px dashed #475569;">
+            <label style="color: #38bdf8;">Foreground Overlay Cutout (Sits over Background)</label>
             <input type="file" accept="image/*,video/webm,video/mp4" style="margin-bottom: 4px;" onchange="handleFileUpload(${scene.id}, 'overlayImage', this)">
             <input type="text" value="${escapeHtml(scene.overlayImage || '')}" placeholder="Optional transparent PNG/WebM URL" onchange="updateScene(${scene.id}, 'overlayImage', this.value)">
             
-            <div class="form-row" style="margin-top: 6px;">
+            <div class="form-row" style="margin-top: 8px;">
+              <div class="form-group">
+                <label>Foreground Motion Profile</label>
+                <select onchange="updateScene(${scene.id}, 'overlayMotionMode', this.value)">
+                  <option value="upward-slide" ${scene.overlayMotionMode === 'upward-slide' ? 'selected' : ''}>Upward Parallax Move</option>
+                  <option value="depth-zoom" ${scene.overlayMotionMode === 'depth-zoom' ? 'selected' : ''}>Depth Zoom Scale</option>
+                  <option value="fast-float" ${scene.overlayMotionMode === 'fast-float' ? 'selected' : ''}>Fast Floating Ascent</option>
+                  <option value="fixed" ${scene.overlayMotionMode === 'fixed' ? 'selected' : ''}>Static Pinned</option>
+                </select>
+              </div>
               <div class="form-group">
                 <label>Overlay Alignment</label>
                 <select onchange="updateScene(${scene.id}, 'overlayPos', this.value)">
@@ -627,7 +637,7 @@
 
             <div class="form-group">
               <label>
-                Overlay Scale (Size)
+                Overlay Base Scale
                 <span class="range-val" id="ovscale-val-${scene.id}">${scene.overlayScale || 1.0}x</span>
               </label>
               <input type="range" min="0.2" max="2.0" step="0.05" value="${scene.overlayScale || 1.0}" 
@@ -636,15 +646,14 @@
 
             <div class="form-group">
               <label>
-                Overlay Scroll Speed
-                <span class="range-val" id="ovspeed-val-${scene.id}">${scene.overlaySpeed || 0.35}</span>
+                Overlay Motion Speed Factor
+                <span class="range-val" id="ovspeed-val-${scene.id}">${scene.overlaySpeed || 0.45}</span>
               </label>
-              <input type="range" min="0.0" max="0.8" step="0.05" value="${scene.overlaySpeed || 0.35}" 
+              <input type="range" min="0.0" max="1.0" step="0.05" value="${scene.overlaySpeed || 0.45}" 
                 oninput="updateScene(${scene.id}, 'overlaySpeed', parseFloat(this.value)); document.getElementById('ovspeed-val-${scene.id}').innerText = this.value">
             </div>
           </div>
 
-          <!-- TEXT ENTRANCE ANIMATION -->
           <div class="form-group">
             <label>Text Entrance Style</label>
             <select onchange="updateScene(${scene.id}, 'textAnimation', this.value)">
@@ -653,7 +662,6 @@
             </select>
           </div>
 
-          <!-- FONT SELECTION & SIZING -->
           <div class="form-group">
             <label>Font Family</label>
             <select onchange="updateScene(${scene.id}, 'fontFamily', this.value)">
@@ -680,7 +688,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Body Text Size</label>
+              <label>Body Size</label>
               <select onchange="updateScene(${scene.id}, 'textSize', this.value)">
                 <option value="p-sm" ${scene.textSize === 'p-sm' ? 'selected' : ''}>Small</option>
                 <option value="p-md" ${scene.textSize === 'p-md' ? 'selected' : ''}>Medium</option>
@@ -688,7 +696,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Page Location</label>
+              <label>Location</label>
               <select onchange="updateScene(${scene.id}, 'position', this.value)">
                 <option value="left" ${scene.position === 'left' ? 'selected' : ''}>Left</option>
                 <option value="center" ${scene.position === 'center' ? 'selected' : ''}>Center</option>
@@ -697,7 +705,6 @@
             </div>
           </div>
 
-          <!-- COLOR PICKERS -->
           <div class="form-row">
             <div class="form-group">
               <label>Card BG Color</label>
@@ -713,10 +720,9 @@
             </div>
           </div>
 
-          <!-- SLIDERS -->
           <div class="form-group">
             <label>
-              Image Zoom (Overscan Padding)
+              Image Zoom Overscan
               <span class="range-val" id="scale-val-${scene.id}">${scene.scale}x</span>
             </label>
             <input type="range" min="1.05" max="1.50" step="0.05" value="${scene.scale}" 
@@ -743,7 +749,7 @@
 
           <div class="form-group">
             <label>
-              Background Parallax Depth
+              Background Parallax Speed
               <span class="range-val" id="speed-val-${scene.id}">${scene.parallaxSpeed}</span>
             </label>
             <input type="range" min="0.0" max="0.4" step="0.02" value="${scene.parallaxSpeed}" 
@@ -756,7 +762,6 @@
       renderPreview();
     }
 
-    // Convert local file to Base64
     function handleFileUpload(sceneId, property, inputElement) {
       const file = inputElement.files[0];
       if (!file) return;
@@ -769,7 +774,6 @@
       reader.readAsDataURL(file);
     }
 
-    // Render Scrollytelling Stage
     function renderPreview() {
       const stage = document.getElementById('scrolly-stage');
       stage.innerHTML = '';
@@ -782,42 +786,34 @@
 
         const rgbaBg = hexToRgba(scene.bgColor, scene.bgOpacity);
 
-        // Render Background Media
         const mediaHtml = isVideoUrl(scene.image)
-          ? `<video id="img-${scene.id}" autoplay loop muted playsinline style="transform: scale(${scene.scale});">
+          ? `<video id="img-${scene.id}" autoplay loop muted playsinline style="transform: scale3d(${scene.scale}, ${scene.scale}, 1);">
                <source src="${scene.image}">
              </video>`
-          : `<img id="img-${scene.id}" src="${scene.image}" alt="${escapeHtml(scene.title)}" style="transform: scale(${scene.scale});">`;
+          : `<img id="img-${scene.id}" src="${scene.image}" alt="${escapeHtml(scene.title)}" style="transform: scale3d(${scene.scale}, ${scene.scale}, 1);">`;
 
-        // Render Optional Overlay Media
         let overlayHtml = '';
         if (scene.overlayImage) {
           overlayHtml = isVideoUrl(scene.overlayImage)
             ? `<div class="sticky-overlay-wrapper ${scene.overlayPos || 'overlay-center'}">
-                 <video id="overlay-${scene.id}" autoplay loop muted playsinline style="transform: scale(${scene.overlayScale || 1.0});">
+                 <video id="overlay-${scene.id}" autoplay loop muted playsinline style="transform: scale3d(${scene.overlayScale || 1.0}, ${scene.overlayScale || 1.0}, 1);">
                    <source src="${scene.overlayImage}">
                  </video>
                </div>`
             : `<div class="sticky-overlay-wrapper ${scene.overlayPos || 'overlay-center'}">
-                 <img id="overlay-${scene.id}" src="${scene.overlayImage}" alt="Foreground Overlay" style="transform: scale(${scene.overlayScale || 1.0});">
+                 <img id="overlay-${scene.id}" src="${scene.overlayImage}" alt="Foreground Overlay" style="transform: scale3d(${scene.overlayScale || 1.0}, ${scene.overlayScale || 1.0}, 1);">
                </div>`;
         }
 
-        // Format Text with Spans if Animated
-        const titleHtml = scene.textAnimation === 'none' 
-          ? escapeHtml(scene.title) 
-          : wrapWords(scene.title);
-
-        const bodyHtml = scene.textAnimation === 'none' 
-          ? escapeHtml(scene.text) 
-          : wrapWords(scene.text);
+        const titleHtml = scene.textAnimation === 'none' ? escapeHtml(scene.title) : wrapWords(scene.title);
+        const bodyHtml = scene.textAnimation === 'none' ? escapeHtml(scene.text) : wrapWords(scene.text);
 
         section.innerHTML = `
           <div class="sticky-media-wrapper">
             ${mediaHtml}
           </div>
           ${overlayHtml}
-          <div class="text-content-wrapper pos-${scene.position}" style="margin-top: -80vh;">
+          <div class="text-content-wrapper pos-${scene.position}" style="margin-top: -60vh;">
             <div class="text-card ${scene.fontFamily}" style="
               background: ${rgbaBg};
               backdrop-filter: blur(8px);
@@ -834,8 +830,16 @@
       });
     }
 
-    // Smooth Inertia Animation Loop (Linear Interpolation)
+    // Hardware-Accelerated Smooth LERP Render Engine
     function smoothRenderLoop() {
+      const viewport = document.getElementById('preview-viewport');
+      if (viewport) {
+        targetScrollY = viewport.scrollTop;
+      }
+      
+      // Interpolate current scroll towards target (LERP)
+      currentScrollY += (targetScrollY - currentScrollY) * lerpFactor;
+      
       const vh = window.innerHeight;
 
       scenes.forEach(scene => {
@@ -845,29 +849,52 @@
 
         if (!section) return;
 
-        const rect = section.getBoundingClientRect();
+        // Calculate progress relative to smooth LERP position instead of raw offset
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.offsetHeight;
         
-        if (rect.top <= vh && rect.bottom >= 0) {
-          const totalDistance = rect.height + vh;
-          const currentProgress = (vh - rect.top) / totalDistance;
-          const offsetProgress = currentProgress - 0.5;
+        const relativeScroll = currentScrollY - sectionTop;
+        
+        if (relativeScroll + vh >= 0 && relativeScroll <= sectionHeight) {
+          const progress = (relativeScroll + vh) / (sectionHeight + vh);
+          const offsetProgress = progress - 0.5;
 
-          // Transform Background Media
+          // 1. Background Transform (Hardware accelerated translate3d)
           if (media) {
             const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
-            media.style.transform = `scale(${scene.scale}) translateY(${translateY}px)`;
+            media.style.transform = `scale3d(${scene.scale}, ${scene.scale}, 1) translate3d(0, ${translateY}px, 0)`;
           }
 
-          // Transform Foreground Overlay Media (Scale + Motion Translation)
+          // 2. Foreground Transform (Motion profile options)
           if (overlay) {
-            const overlayTranslateY = offsetProgress * (vh * (scene.overlaySpeed || 0.35) * 2);
-            overlay.style.transform = `scale(${scene.overlayScale || 1.0}) translateY(${overlayTranslateY}px)`;
+            const speed = scene.overlaySpeed || 0.45;
+            let overlayTranslateY = 0;
+            let overlayScale = scene.overlayScale || 1.0;
+
+            switch(scene.overlayMotionMode) {
+              case 'depth-zoom':
+                overlayScale *= (1 + progress * speed * 0.5);
+                overlayTranslateY = offsetProgress * (vh * 0.1);
+                break;
+              case 'fast-float':
+                overlayTranslateY = -progress * (vh * speed * 1.5);
+                break;
+              case 'fixed':
+                overlayTranslateY = 0;
+                break;
+              case 'upward-slide':
+              default:
+                overlayTranslateY = offsetProgress * (vh * speed * -1.8);
+                break;
+            }
+
+            overlay.style.transform = `scale3d(${overlayScale}, ${overlayScale}, 1) translate3d(0, ${overlayTranslateY}px, 0)`;
           }
 
-          // Trigger Word-by-Word Floating Entrance when crossing threshold
-          const textCard = document.querySelector(`#section-${scene.id} .text-card`);
+          // 3. Text entrance toggle
+          const textCard = section.querySelector('.text-card');
           if (textCard && scene.textAnimation !== 'none') {
-            if (rect.top <= vh * 0.85 && rect.bottom >= vh * 0.15) {
+            if (relativeScroll >= 0 && relativeScroll <= sectionHeight - vh * 0.5) {
               textCard.classList.add('animate-words');
             } else {
               textCard.classList.remove('animate-words');
@@ -879,7 +906,7 @@
       requestAnimationFrame(smoothRenderLoop);
     }
 
-    // Data Operations
+    // Event Handlers & Data Actions
     function addScene() {
       const newId = Date.now();
       scenes.push(sanitizeScene({
@@ -888,7 +915,8 @@
         text: "Add your customized text content here...",
         image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
         overlayImage: "",
-        overlaySpeed: 0.35,
+        overlayMotionMode: "upward-slide",
+        overlaySpeed: 0.45,
         overlayScale: 1.0,
         overlayPos: "overlay-center",
         scrollDistance: 2.0,
@@ -929,7 +957,6 @@
       return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // Modal & Export Code Logic
     function openExportModal() {
       const modal = document.getElementById('export-modal');
       const output = document.getElementById('export-code-output');
@@ -960,27 +987,22 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Fira+Code:wght@400;600&family=Inter:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,300;0,700;1,300&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; overflow-x: hidden; }
     .scrolly-section { position: relative; width: 100%; }
-    .sticky-media-wrapper { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; }
-    .sticky-media-wrapper img,
-    .sticky-media-wrapper video { width: 100%; height: 100%; object-fit: cover; will-change: transform; }
-    .sticky-overlay-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; pointer-events: none; z-index: 3; overflow: hidden; display: flex; }
-    .sticky-overlay-wrapper img,
-    .sticky-overlay-wrapper video { max-width: 100%; max-height: 100%; object-fit: contain; will-change: transform; }
+    .sticky-media-wrapper { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; backface-visibility: hidden; transform: translateZ(0); }
+    .sticky-media-wrapper img, .sticky-media-wrapper video { width: 100%; height: 100%; object-fit: cover; will-change: transform; backface-visibility: hidden; }
+    .sticky-overlay-wrapper { position: sticky; top: 0; left: 0; width: 100%; height: 100vh; pointer-events: none; z-index: 4; overflow: visible; display: flex; margin-top: -100vh; backface-visibility: hidden; }
+    .sticky-overlay-wrapper img, .sticky-overlay-wrapper video { max-width: 90vw; max-height: 85vh; object-fit: contain; will-change: transform; backface-visibility: hidden; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5)); }
     .overlay-center { justify-content: center; align-items: center; }
-    .overlay-right-bottom { justify-content: flex-end; align-items: flex-end; }
-    .overlay-left-bottom { justify-content: flex-start; align-items: flex-end; }
-    .overlay-right-top { justify-content: flex-end; align-items: flex-start; }
-    .text-content-wrapper { position: relative; z-index: 2; max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; }
-    .pos-left { justify-content: flex-start; }
-    .pos-center { justify-content: center; }
-    .pos-right { justify-content: flex-end; }
-    .text-card { max-width: 500px; width: 100%; margin-bottom: 80vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-    .text-card h2 { margin-bottom: 12px; line-height: 1.2; }
-    .text-card p { line-height: 1.6; }
+    .overlay-right-bottom { justify-content: flex-end; align-items: flex-end; padding: 40px; }
+    .overlay-left-bottom { justify-content: flex-start; align-items: flex-end; padding: 40px; }
+    .overlay-right-top { justify-content: flex-end; align-items: flex-start; padding: 40px; }
+    .text-content-wrapper { position: relative; z-index: 3; max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; }
+    .pos-left { justify-content: flex-start; } .pos-center { justify-content: center; } .pos-right { justify-content: flex-end; }
+    .text-card { max-width: 500px; width: 100%; margin-bottom: 60vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+    .text-card h2 { margin-bottom: 12px; line-height: 1.2; } .text-card p { line-height: 1.6; }
     .word-span { display: inline-block; white-space: pre-wrap; opacity: 0; transform: translateY(18px); will-change: transform, opacity; }
-    .text-card.animate-words .word-span { animation: wordFloatIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: calc(var(--word-index) * 0.025s); }
+    .text-card.animate-words .word-span { animation: wordFloatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: calc(var(--word-index) * 0.02s); }
     @keyframes wordFloatIn { to { opacity: 1; transform: translateY(0); } }
     .h-sm { font-size: 1.3rem; } .h-md { font-size: 1.8rem; } .h-lg { font-size: 2.4rem; } .h-xl { font-size: 3.2rem; }
     .p-sm { font-size: 0.9rem; } .p-md { font-size: 1.1rem; } .p-lg { font-size: 1.35rem; }
@@ -994,29 +1016,63 @@
 
   <script>
     const scenes = ${JSON.stringify(scenes)};
+    let currentScrollY = 0;
+    let targetScrollY = 0;
+    const lerpFactor = 0.12;
+
+    window.addEventListener('scroll', () => { targetScrollY = window.scrollY; }, { passive: true });
+
     function smoothRenderLoop() {
+      currentScrollY += (targetScrollY - currentScrollY) * lerpFactor;
       const vh = window.innerHeight;
+
       scenes.forEach(scene => {
         const section = document.getElementById('section-' + scene.id);
         const media = document.getElementById('img-' + scene.id);
         const overlay = document.getElementById('overlay-' + scene.id);
         if (!section) return;
-        const rect = section.getBoundingClientRect();
-        if (rect.top <= vh && rect.bottom >= 0) {
-          const totalDistance = rect.height + vh;
-          const currentProgress = (vh - rect.top) / totalDistance;
-          const offsetProgress = currentProgress - 0.5;
+
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.offsetHeight;
+        const relativeScroll = currentScrollY - sectionTop;
+
+        if (relativeScroll + vh >= 0 && relativeScroll <= sectionHeight) {
+          const progress = (relativeScroll + vh) / (sectionHeight + vh);
+          const offsetProgress = progress - 0.5;
+
           if (media) {
             const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
-            media.style.transform = 'scale(' + scene.scale + ') translateY(' + translateY + 'px)';
+            media.style.transform = 'scale3d(' + scene.scale + ',' + scene.scale + ',1) translate3d(0,' + translateY + 'px,0)';
           }
+
           if (overlay) {
-            const overlayTranslateY = offsetProgress * (vh * (scene.overlaySpeed || 0.35) * 2);
-            overlay.style.transform = 'scale(' + (scene.overlayScale || 1.0) + ') translateY(' + overlayTranslateY + 'px)';
+            const speed = scene.overlaySpeed || 0.45;
+            let overlayTranslateY = 0;
+            let overlayScale = scene.overlayScale || 1.0;
+
+            switch(scene.overlayMotionMode) {
+              case 'depth-zoom':
+                overlayScale *= (1 + progress * speed * 0.5);
+                overlayTranslateY = offsetProgress * (vh * 0.1);
+                break;
+              case 'fast-float':
+                overlayTranslateY = -progress * (vh * speed * 1.5);
+                break;
+              case 'fixed':
+                overlayTranslateY = 0;
+                break;
+              case 'upward-slide':
+              default:
+                overlayTranslateY = offsetProgress * (vh * speed * -1.8);
+                break;
+            }
+
+            overlay.style.transform = 'scale3d(' + overlayScale + ',' + overlayScale + ',1) translate3d(0,' + overlayTranslateY + 'px,0)';
           }
-          const textCard = document.querySelector('#section-' + scene.id + ' .text-card');
+
+          const textCard = section.querySelector('.text-card');
           if (textCard && scene.textAnimation !== 'none') {
-            if (rect.top <= vh * 0.85 && rect.bottom >= vh * 0.15) {
+            if (relativeScroll >= 0 && relativeScroll <= sectionHeight - vh * 0.5) {
               textCard.classList.add('animate-words');
             } else {
               textCard.classList.remove('animate-words');
@@ -1032,7 +1088,7 @@
 </html>`;
     }
 
-    // Initialize App
+    // Initialize
     loadFromLocalStorage();
     renderEditor();
     smoothRenderLoop();
