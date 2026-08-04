@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ocean Discovery (Demo)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Fira+Code:wght@400;600&family=Inter:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,300;0,700;1,300&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; overflow-x: hidden; }
+    .scrolly-section { position: relative; width: 100%; }
+    .sticky-media-wrapper { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; backface-visibility: hidden; transform: translateZ(0); }
+    .sticky-media-wrapper img, .sticky-media-wrapper video { width: 100%; height: 100%; object-fit: cover; will-change: transform; backface-visibility: hidden; }
+    .sticky-overlay-wrapper { position: sticky; top: 0; left: 0; width: 100%; height: 100vh; pointer-events: none; z-index: 4; overflow: visible; display: flex; margin-top: -100vh; backface-visibility: hidden; }
+    .sticky-overlay-wrapper img, .sticky-overlay-wrapper video { max-width: 90vw; max-height: 85vh; object-fit: contain; will-change: transform; backface-visibility: hidden; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5)); }
+    .overlay-center { justify-content: center; align-items: center; }
+    .overlay-right-bottom { justify-content: flex-end; align-items: flex-end; padding: 40px; }
+    .overlay-left-bottom { justify-content: flex-start; align-items: flex-end; padding: 40px; }
+    .overlay-right-top { justify-content: flex-end; align-items: flex-start; padding: 40px; }
+    .text-content-wrapper { position: relative; z-index: 3; max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; }
+    .pos-left { justify-content: flex-start; } .pos-center { justify-content: center; } .pos-right { justify-content: flex-end; }
+    .text-card { max-width: 500px; width: 100%; margin-bottom: 20vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+    .text-card h2 { margin-bottom: 12px; line-height: 1.2; } .text-card p { line-height: 1.6; }
+    
+    .word-span { display: inline-block; white-space: pre-wrap; opacity: 0; transform: translateY(16px); will-change: transform, opacity; }
+    .text-card.anim-words.active .word-span { animation: wordFloatIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: calc(var(--word-index) * 0.018s); }
+    @keyframes wordFloatIn { to { opacity: 1; transform: translateY(0); } }
+
+    .text-card.anim-slide-up { opacity: 0; transform: translateY(40px); transition: opacity 0.5s ease-out, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    .text-card.anim-slide-up.active { opacity: 1; transform: translateY(0); }
+
+    .text-card.anim-zoom-pop { opacity: 0; transform: scale(0.85) translateY(20px); transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .text-card.anim-zoom-pop.active { opacity: 1; transform: scale(1) translateY(0); }
+
+    .text-card.anim-blur-focus { opacity: 0; filter: blur(12px); transform: translateY(15px); transition: opacity 0.5s ease, filter 0.5s ease, transform 0.5s ease; }
+    .text-card.anim-blur-focus.active { opacity: 1; filter: blur(0px); transform: translateY(0); }
+
+    .type-char { opacity: 0; display: inline; }
+    .text-card.anim-typewriter.active .type-char { animation: typeCharIn 0.05s forwards; animation-delay: calc(var(--char-index) * 0.025s); }
+    @keyframes typeCharIn { to { opacity: 1; } }
+
+    .h-sm { font-size: 1.3rem; } .h-md { font-size: 1.8rem; } .h-lg { font-size: 2.4rem; } .h-xl { font-size: 3.2rem; }
+    .p-sm { font-size: 0.9rem; } .p-md { font-size: 1.1rem; } .p-lg { font-size: 1.35rem; }
+    .font-inter { font-family: 'Inter', sans-serif; } .font-roboto { font-family: 'Roboto', sans-serif; } .font-montserrat { font-family: 'Montserrat', sans-serif; }
+    .font-playfair { font-family: 'Playfair Display', serif; } .font-merriweather { font-family: 'Merriweather', serif; } .font-lora { font-family: 'Lora', serif; }
+    .font-cinzel { font-family: 'Cinzel', serif; } .font-oswald { font-family: 'Oswald', sans-serif; } .font-mono { font-family: 'Fira Code', monospace; }
+  </style>
+</head>
+<body>
+  <div class="scrolly-section" id="section-1" style="height: 100vh;">
+          <div class="sticky-media-wrapper">
+            <img id="img-1" src="https://images.pexels.com/photos/35114846/pexels-photo-35114846.jpeg?_gl=1*8xc92o*_ga*MTAzNTg2NTY1My4xNzgzNjk4MzE3*_ga_8JE65Q40S6*czE3ODU4NTc5NTckbzkkZzEkdDE3ODU4NTc5NjckajUwJGwwJGgw" alt="Tripadvisor Group's new performance rating scale" style="transform: scale3d(1.4, 1.4, 1);">
+          </div>
+          <div class="sticky-overlay-wrapper overlay-left-bottom">
+                 <img id="overlay-1" src="https://gwlasiuk.github.io/scrollytelling-builder/people.png" alt="Foreground Overlay" style="transform: scale3d(1.3, 1.3, 1);">
+               </div>
+          <div class="text-content-wrapper pos-left" style="margin-top: -85vh;">
+            <div class="text-card font-roboto anim-words" style="
+              background: rgba(247, 232, 232, 0.7);
+              backdrop-filter: blur(8px);
+              border-radius: 12px;
+              padding: 32px;
+              border: 1px solid rgba(255, 255, 255, 0.15);
+            ">
+              <h2 class="h-lg" style="color: #002b11"><span class="word-span" style="--word-index: 0">Tripadvisor</span> <span class="word-span" style="--word-index: 1">Group's</span> <span class="word-span" style="--word-index: 2">new</span> <span class="word-span" style="--word-index: 3">performance</span> <span class="word-span" style="--word-index: 4">rating</span> <span class="word-span" style="--word-index: 5">scale</span> </h2>
+              <p class="p-md" style="color: #000000"><span class="word-span" style="--word-index: 0">The</span> <span class="word-span" style="--word-index: 1">Impact</span> <span class="word-span" style="--word-index: 2">rating</span> <span class="word-span" style="--word-index: 3">scale</span> <span class="word-span" style="--word-index: 4">provides</span> <span class="word-span" style="--word-index: 5">a</span> <span class="word-span" style="--word-index: 6">single,</span> <span class="word-span" style="--word-index: 7">integrated</span> <span class="word-span" style="--word-index: 8">view</span> <span class="word-span" style="--word-index: 9">of</span> <span class="word-span" style="--word-index: 10">impact,</span> <span class="word-span" style="--word-index: 11">bringing</span> <span class="word-span" style="--word-index: 12">together</span> <span class="word-span" style="--word-index: 13">both</span> <span class="word-span" style="--word-index: 14">what</span> <span class="word-span" style="--word-index: 15">was</span> <span class="word-span" style="--word-index: 16">delivered</span> <span class="word-span" style="--word-index: 17">and</span> <span class="word-span" style="--word-index: 18">how</span> <span class="word-span" style="--word-index: 19">it</span> <span class="word-span" style="--word-index: 20">was</span> <span class="word-span" style="--word-index: 21">achieved.</span> <span class="word-span" style="--word-index: 22">Leaders</span> <span class="word-span" style="--word-index: 23">should</span> <span class="word-span" style="--word-index: 24">evaluate</span> <span class="word-span" style="--word-index: 25">overall</span> <span class="word-span" style="--word-index: 26">impact</span> <span class="word-span" style="--word-index: 27">by</span> <span class="word-span" style="--word-index: 28">considering</span> <span class="word-span" style="--word-index: 29">results,</span> <span class="word-span" style="--word-index: 30">the</span> <span class="word-span" style="--word-index: 31">quality</span> <span class="word-span" style="--word-index: 32">of</span> <span class="word-span" style="--word-index: 33">execution,</span> <span class="word-span" style="--word-index: 34">and</span> <span class="word-span" style="--word-index: 35">how</span> <span class="word-span" style="--word-index: 36">closely</span> <span class="word-span" style="--word-index: 37">the</span> <span class="word-span" style="--word-index: 38">behaviors</span> <span class="word-span" style="--word-index: 39">reflect</span> <span class="word-span" style="--word-index: 40">our</span> <span class="word-span" style="--word-index: 41">values.</span> <span class="word-span" style="--word-index: 42">Strong</span> <span class="word-span" style="--word-index: 43">performance</span> <span class="word-span" style="--word-index: 44">requires</span> <span class="word-span" style="--word-index: 45">both</span> <span class="word-span" style="--word-index: 46">meaningful</span> <span class="word-span" style="--word-index: 47">outcomes</span> <span class="word-span" style="--word-index: 48">and</span> <span class="word-span" style="--word-index: 49">the</span> <span class="word-span" style="--word-index: 50">right</span> <span class="word-span" style="--word-index: 51">behaviors.</span> <span class="word-span" style="--word-index: 52">Sustainable</span> <span class="word-span" style="--word-index: 53">impact</span> <span class="word-span" style="--word-index: 54">comes</span> <span class="word-span" style="--word-index: 55">from</span> <span class="word-span" style="--word-index: 56">delivering</span> <span class="word-span" style="--word-index: 57">results</span> <span class="word-span" style="--word-index: 58">in</span> <span class="word-span" style="--word-index: 59">a</span> <span class="word-span" style="--word-index: 60">way</span> <span class="word-span" style="--word-index: 61">that</span> <span class="word-span" style="--word-index: 62">reflects</span> <span class="word-span" style="--word-index: 63">how</span> <span class="word-span" style="--word-index: 64">we</span> <span class="word-span" style="--word-index: 65">work</span> <span class="word-span" style="--word-index: 66">and</span> <span class="word-span" style="--word-index: 67">lead</span> <span class="word-span" style="--word-index: 68">as</span> <span class="word-span" style="--word-index: 69">an</span> <span class="word-span" style="--word-index: 70">organization.</span> </p>
+            </div>
+          </div>
+        </div><div class="scrolly-section" id="section-2" style="height: 260vh;">
+          <div class="sticky-media-wrapper">
+            <img id="img-2" src="https://images.pexels.com/photos/5961718/pexels-photo-5961718.jpeg?_gl=1*ujlbbf*_ga*MTAzNTg2NTY1My4xNzgzNjk4MzE3*_ga_8JE65Q40S6*czE3ODU4Njg5NjckbzEwJGcxJHQxNzg1ODY4OTgzJGo0NCRsMCRoMA.." alt="Understanding the new impact scale" style="transform: scale3d(1.35, 1.35, 1) translate3d(0px, 102.904px, 0px);">
+          </div>
+          <div class="sticky-overlay-wrapper overlay-left-bottom">
+                 <img id="overlay-2" src="https://gwlasiuk.github.io/scrollytelling-builder/NavigatingTheImpactRatingScale.png" alt="Foreground Overlay" style="transform: scale3d(0.8, 0.8, 1) translate3d(0px, -661.524px, 0px);">
+               </div>
+          <div class="text-content-wrapper pos-right" style="margin-top: -85vh;">
+            <div class="text-card font-roboto anim-blur-focus active" style="
+              background: rgba(255, 202, 139, 0.85);
+              backdrop-filter: blur(8px);
+              border-radius: 8px;
+              padding: 24px;
+              border: 1px solid rgba(255, 255, 255, 0.15);
+            ">
+              <h2 class="h-lg" style="color: #000000">Understanding the new impact scale</h2>
+              <p class="p-md" style="color: #000000">The Impact framework represents a shift away from the traditional 9 box, moving toward a holistic assessment of an employee's contributions. Rather than checking boxes on two separate lists, this model looks at the totality of an individual's footprint within the organization.
+At its core, "Impact" is the fusion of Results and Behaviors. We view these as inseparable components of professional success, not as independent variables.
+
+</p>
+            </div>
+          </div>
+        </div><div class="scrolly-section" id="section-1785444466084" style="height: 80vh;">
+          <div class="sticky-media-wrapper">
+            <img id="img-1785444466084" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&amp;fit=crop&amp;w=1200&amp;q=80" alt="The framework allows us to" style="transform: scale3d(1.2, 1.2, 1) translate3d(0px, -22.6212px, 0px);">
+          </div>
+          <div class="sticky-overlay-wrapper overlay-right-top">
+                 <img id="overlay-1785444466084" src="https://gwlasiuk.github.io/scrollytelling-builder/airport.png" alt="Foreground Overlay" style="transform: scale3d(0.55, 0.55, 1) translate3d(0px, -110.062px, 0px);">
+               </div>
+          <div class="text-content-wrapper pos-left" style="margin-top: -85vh;">
+            <div class="text-card font-roboto anim-fade-up active" style="
+              background: rgba(95, 234, 255, 0.85);
+              backdrop-filter: blur(8px);
+              border-radius: 12px;
+              padding: 32px;
+              border: 1px solid rgba(255, 255, 255, 0.15);
+            ">
+              <h2 class="h-md" style="color: #060e0f">The framework allows us to</h2>
+              <p class="p-md" style="color: #060306">Evaluate employees based on their current impact, ensuring we invest in the right talent for future growth.
+Provide a structured approach to assessments, promoting fairness and consistency across all teams and functions.
+Help leadership teams make strategic decisions about talent, succession planning, and team dynamics.</p>
+            </div>
+          </div>
+        </div>
+
+  <script>
+    const scenes = [{"id":1,"title":"Tripadvisor Group's new performance rating scale","text":"The Impact rating scale provides a single, integrated view of impact, bringing together both what was delivered and how it was achieved. Leaders should evaluate overall impact by considering results, the quality of execution, and how closely the behaviors reflect our values. Strong performance requires both meaningful outcomes and the right behaviors. Sustainable impact comes from delivering results in a way that reflects how we work and lead as an organization.","image":"https://images.pexels.com/photos/35114846/pexels-photo-35114846.jpeg?_gl=1*8xc92o*_ga*MTAzNTg2NTY1My4xNzgzNjk4MzE3*_ga_8JE65Q40S6*czE3ODU4NTc5NTckbzkkZzEkdDE3ODU4NTc5NjckajUwJGwwJGgw","overlayImage":"https://gwlasiuk.github.io/scrollytelling-builder/people.png","overlaySpeed":0.05,"scrollDistance":1,"parallaxSpeed":0.14,"scale":1.4,"position":"left","fontFamily":"font-roboto","titleSize":"h-lg","textSize":"p-md","bgColor":"#f7e8e8","bgOpacity":0.7,"textColor":"#000000","accentColor":"#002b11","borderRadius":12,"padding":32,"textAnimation":"words","overlayScale":1.3,"overlayPos":"overlay-left-bottom","overlayMotionMode":"fast-float"},{"id":2,"title":"Understanding the new impact scale","text":"The Impact framework represents a shift away from the traditional 9 box, moving toward a holistic assessment of an employee's contributions. Rather than checking boxes on two separate lists, this model looks at the totality of an individual's footprint within the organization.\nAt its core, \"Impact\" is the fusion of Results and Behaviors. We view these as inseparable components of professional success, not as independent variables.\n\n","image":"https://images.pexels.com/photos/5961718/pexels-photo-5961718.jpeg?_gl=1*ujlbbf*_ga*MTAzNTg2NTY1My4xNzgzNjk4MzE3*_ga_8JE65Q40S6*czE3ODU4Njg5NjckbzEwJGcxJHQxNzg1ODY4OTgzJGo0NCRsMCRoMA..","overlayImage":"https://gwlasiuk.github.io/scrollytelling-builder/NavigatingTheImpactRatingScale.png","overlaySpeed":1,"scrollDistance":2.6,"parallaxSpeed":0.14,"scale":1.35,"position":"right","fontFamily":"font-roboto","titleSize":"h-lg","textSize":"p-md","bgColor":"#ffca8b","bgOpacity":0.85,"textColor":"#000000","accentColor":"#000000","borderRadius":8,"padding":24,"textAnimation":"blur-focus","overlayScale":0.8,"overlayPos":"overlay-left-bottom","overlayMotionMode":"upward-slide"},{"id":1785444466084,"title":"The framework allows us to","text":"Evaluate employees based on their current impact, ensuring we invest in the right talent for future growth.\nProvide a structured approach to assessments, promoting fairness and consistency across all teams and functions.\nHelp leadership teams make strategic decisions about talent, succession planning, and team dynamics.","image":"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80","overlayImage":"https://gwlasiuk.github.io/scrollytelling-builder/airport.png","overlaySpeed":0.2,"scrollDistance":0.8,"parallaxSpeed":0.24,"scale":1.2,"position":"left","fontFamily":"font-roboto","titleSize":"h-md","textSize":"p-md","bgColor":"#5feaff","bgOpacity":0.85,"textColor":"#060306","accentColor":"#060e0f","borderRadius":12,"padding":32,"textAnimation":"fade-up","overlayScale":0.55,"overlayPos":"overlay-right-top","overlayMotionMode":"fast-float"}];
+    let currentScrollY = 0;
+    let targetScrollY = 0;
+    const lerpFactor = 0.12;
+
+    window.addEventListener('scroll', () => { targetScrollY = window.scrollY; }, { passive: true });
+
+    function smoothRenderLoop() {
+      currentScrollY += (targetScrollY - currentScrollY) * lerpFactor;
+      const vh = window.innerHeight;
+
+      scenes.forEach(scene => {
+        const section = document.getElementById('section-' + scene.id);
+        const media = document.getElementById('img-' + scene.id);
+        const overlay = document.getElementById('overlay-' + scene.id);
+        if (!section) return;
+
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.offsetHeight;
+        const relativeScroll = currentScrollY - sectionTop;
+
+        if (relativeScroll + vh >= 0 && relativeScroll <= sectionHeight) {
+          const progress = (relativeScroll + vh) / (sectionHeight + vh);
+          const offsetProgress = progress - 0.5;
+
+          if (media) {
+            const translateY = offsetProgress * (vh * scene.parallaxSpeed * 2);
+            media.style.transform = 'scale3d(' + scene.scale + ',' + scene.scale + ',1) translate3d(0,' + translateY + 'px,0)';
+          }
+
+          if (overlay) {
+            const speed = scene.overlaySpeed || 0.45;
+            let overlayTranslateY = 0;
+            let overlayScale = scene.overlayScale || 1.0;
+
+            switch(scene.overlayMotionMode) {
+              case 'depth-zoom':
+                overlayScale *= (1 + progress * speed * 0.5);
+                overlayTranslateY = offsetProgress * (vh * 0.1);
+                break;
+              case 'fast-float':
+                overlayTranslateY = -progress * (vh * speed * 1.5);
+                break;
+              case 'fixed':
+                overlayTranslateY = 0;
+                break;
+              case 'upward-slide':
+              default:
+                overlayTranslateY = offsetProgress * (vh * speed * -1.8);
+                break;
+            }
+
+            overlay.style.transform = 'scale3d(' + overlayScale + ',' + overlayScale + ',1) translate3d(0,' + overlayTranslateY + 'px,0)';
+          }
+
+          const textCard = section.querySelector('.text-card');
+          if (textCard && scene.textAnimation !== 'none') {
+            if (relativeScroll >= -vh * 0.3 && relativeScroll <= sectionHeight - vh * 0.2) {
+              textCard.classList.add('active');
+            } else {
+              textCard.classList.remove('active');
+            }
+          }
+        }
+      });
+      requestAnimationFrame(smoothRenderLoop);
+    }
+    smoothRenderLoop();
+  </script>
+</body>
+</html>
